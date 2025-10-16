@@ -198,11 +198,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (!pannerNodeRef.current) {
         pannerNodeRef.current = audioContext.createStereoPanner();
     }
-    if (listeningControls.monoAudio) {
-      pannerNodeRef.current.pan.value = 0; // Center pan for mono
-    } else {
-      pannerNodeRef.current.pan.value = typeof listeningControls.balance === 'number' && isFinite(listeningControls.balance) ? listeningControls.balance : 0;
-    }
+    const balance = listeningControls.balance;
+    pannerNodeRef.current.pan.value = typeof balance === 'number' && isFinite(balance) ? balance : 0;
     lastNode.connect(pannerNodeRef.current);
     lastNode = pannerNodeRef.current;
 
@@ -210,7 +207,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (!gainNodeRef.current) {
       gainNodeRef.current = audioContext.createGain();
     }
-    gainNodeRef.current.gain.value = Math.pow(10, gain / 20);
+    if (typeof gain === 'number' && isFinite(gain)) {
+        gainNodeRef.current.gain.value = Math.pow(10, gain / 20);
+    }
     lastNode.connect(gainNodeRef.current);
     lastNode = gainNodeRef.current;
     
@@ -758,3 +757,5 @@ export function usePlayer(): PlayerContextType {
   }
   return context;
 }
+
+    

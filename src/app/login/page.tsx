@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, sendPasswordResetEmail } from 'firebase/auth';
-import { SpotonLogo } from '@/components/spoton-logo';
+import { HarmonyStreamLogo } from '@/components/harmony-stream-logo';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { FcGoogle } from 'react-icons/fc';
 
@@ -143,8 +143,8 @@ export default function LoginPage() {
       <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
         <div className="w-full max-w-md space-y-6">
           <div className="flex flex-col items-center text-center">
-              <SpotonLogo className="h-12 w-12 text-primary mb-4" />
-              <h1 className="text-3xl font-bold tracking-tight">Welcome back to Spoton</h1>
+              <HarmonyStreamLogo className="h-12 w-12 text-primary mb-4" />
+              <h1 className="text-3xl font-bold tracking-tight">Welcome back to HarmonyStream</h1>
               <p className="text-muted-foreground">Sign in to continue</p>
           </div>
           

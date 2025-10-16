@@ -199,7 +199,7 @@ export default function SettingsPage() {
     if (permission === 'granted') {
       toast({
         title: "Notifications Enabled!",
-        description: "You will now receive notifications from Spoton.",
+        description: "You will now receive notifications from HarmonyStream.",
       });
     } else {
       toast({
@@ -627,6 +627,3 @@ export default function SettingsPage() {
     </>
   );
 }
-
-
-    

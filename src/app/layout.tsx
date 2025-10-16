@@ -20,9 +20,10 @@ export default function RootLayout({
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Hide the loader after a short delay to ensure content has started rendering.
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 3000); // Show intro for 3 seconds
+    }, 1500); // Show intro for 1.5 seconds
 
     return () => clearTimeout(timer);
   }, []);
@@ -37,20 +38,22 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <IntroLoader loading={isLoading} />
-        <FirebaseClientProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <PlayerProvider>
-              <AppShell>{children}</AppShell>
-              <PlaybackQueue />
-            </PlayerProvider>
-            <Toaster />
-          </ThemeProvider>
-        </FirebaseClientProvider>
+        {!isLoading && (
+          <FirebaseClientProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="dark"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <PlayerProvider>
+                <AppShell>{children}</AppShell>
+                <PlaybackQueue />
+              </PlayerProvider>
+              <Toaster />
+            </ThemeProvider>
+          </FirebaseClientProvider>
+        )}
       </body>
     </html>
   );

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { SpotonLogo } from '@/components/spoton-logo';
+import { HarmonyStreamLogo } from '@/components/harmony-stream-logo';
 import { cn } from '@/lib/utils';
 
 export function IntroLoader({ loading }: { loading: boolean }) {
@@ -13,8 +13,8 @@ export function IntroLoader({ loading }: { loading: boolean }) {
       )}
     >
       <div className="flex flex-col items-center gap-4">
-        <SpotonLogo className="h-24 w-24 text-white" />
-        <h1 className="text-4xl font-bold tracking-tight text-white">spoton</h1>
+        <HarmonyStreamLogo className="h-24 w-24 text-white" />
+        <h1 className="text-4xl font-bold tracking-tight text-white">HarmonyStream</h1>
       </div>
       <div className="absolute bottom-8 text-center">
         <p className="text-sm text-gray-400">By zohaib</p>

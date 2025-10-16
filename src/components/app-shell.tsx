@@ -49,7 +49,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  const showBottomNav = !['/profile', '/settings', '/whats-new'].some(path => isActive(path));
+  const showBottomNav = true;
 
 
   return (

@@ -56,6 +56,15 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
+    if (!auth) {
+        toast({
+            variant: 'destructive',
+            title: 'Login failed',
+            description: 'Authentication service is not available.',
+        });
+        setIsLoading(false);
+        return;
+    }
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
       toast({ title: 'Login successful!' });
@@ -73,6 +82,15 @@ export default function LoginPage() {
 
   const onForgotPasswordSubmit = async (data: ForgotPasswordFormValues) => {
     setIsLoading(true);
+    if (!auth) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Authentication service is not available.',
+        });
+        setIsLoading(false);
+        return;
+    }
     try {
       await sendPasswordResetEmail(auth, data.email);
       toast({
@@ -94,6 +112,15 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
+    if (!auth) {
+        toast({
+            variant: 'destructive',
+            title: 'Google Sign-in failed',
+            description: 'Authentication service is not available.',
+        });
+        setIsLoading(false);
+        return;
+    }
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);

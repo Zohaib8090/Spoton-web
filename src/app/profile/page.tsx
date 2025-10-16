@@ -62,47 +62,49 @@ export default function ProfilePage() {
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !firestore) return;
+    if (!user || !firestore || !auth?.currentUser) return;
 
     setIsUpdating(true);
 
-    // Update Auth profile
-    updateProfile(user, { 
-      displayName: displayName || '',
-      photoURL: photoURL || '' 
-    }).then(() => {
-        // Update Firestore document
+    try {
+        await updateProfile(auth.currentUser, { 
+            displayName: displayName || '',
+            photoURL: photoURL || '' 
+        });
+
         const userDocRef = doc(firestore, 'users', user.uid);
         const userData = { 
             username: displayName,
             photoURL: photoURL
         };
 
-        setDoc(userDocRef, userData, { merge: true }).then(async () => {
-            toast({
-                title: 'Profile Updated',
-                description: 'Your profile has been successfully updated.',
-            });
-            // Force a reload of the user object to see changes
-            await user.reload();
-        }).catch(() => {
+        await setDoc(userDocRef, userData, { merge: true });
+        
+        toast({
+            title: 'Profile Updated',
+            description: 'Your profile has been successfully updated.',
+        });
+        
+        await user.reload();
+
+    } catch (error: any) {
+        if (error.code?.startsWith('firestore/permission-denied')) {
             const permissionError = new FirestorePermissionError({
-                path: userDocRef.path,
+                path: doc(firestore, 'users', user.uid).path,
                 operation: 'update',
-                requestResourceData: userData,
+                requestResourceData: { username: displayName, photoURL: photoURL },
             });
             errorEmitter.emit('permission-error', permissionError);
-        });
-
-    }).catch((error: any) => {
-      toast({
-        variant: 'destructive',
-        title: 'Auth Update Failed',
-        description: error.message,
-      });
-    }).finally(() => {
+        } else {
+            toast({
+                variant: 'destructive',
+                title: 'Update Failed',
+                description: error.message,
+            });
+        }
+    } finally {
         setIsUpdating(false);
-    });
+    }
   };
 
   const handleChangePassword = async (data: ChangePasswordFormValues) => {
@@ -112,37 +114,29 @@ export default function ProfilePage() {
     
     const credential = EmailAuthProvider.credential(user.email, data.oldPassword);
 
-    reauthenticateWithCredential(user, credential).then(() => {
-        // User re-authenticated. Now, update the password.
-        updatePassword(user, data.newPassword).then(() => {
-            toast({
-                title: 'Password Updated',
-                description: 'Your password has been changed successfully.',
-            });
-            setIsChangePasswordOpen(false);
-            resetPasswordForm();
-        }).catch((error) => {
-             toast({
-                variant: 'destructive',
-                title: 'Password Update Failed',
-                description: error.message,
-            });
+    try {
+        await reauthenticateWithCredential(user, credential);
+        await updatePassword(user, data.newPassword);
+        toast({
+            title: 'Password Updated',
+            description: 'Your password has been changed successfully.',
         });
-    }).catch((error) => {
-        // An error occurred.
+        setIsChangePasswordOpen(false);
+        resetPasswordForm();
+    } catch (error: any) {
         setReauthError(true);
         toast({
             variant: 'destructive',
             title: 'Authentication Failed',
             description: "The old password you entered is incorrect.",
         });
-    }).finally(() => {
+    } finally {
         setIsUpdating(false);
-    });
+    }
   }
 
   const handleForgotPassword = async () => {
-      if (!user?.email) return;
+      if (!user?.email || !auth) return;
       try {
         await sendPasswordResetEmail(auth, user.email);
         toast({

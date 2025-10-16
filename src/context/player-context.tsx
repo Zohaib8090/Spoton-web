@@ -287,6 +287,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         clearInterval(fadeIntervalRef.current);
         fadeIntervalRef.current = null;
     }
+
+    if (audioElement && audioElement.src && audioElement.src.startsWith('blob:')) {
+      URL.revokeObjectURL(audioElement.src);
+    }
     
     setCurrentSong(song);
     setIsPlaying(true);

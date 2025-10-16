@@ -15,7 +15,6 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { errorEmitter, FirestorePermissionError } from '@/firebase';
 import { PlaylistContent } from '@/components/playlist-content';
 import type { Song } from '@/lib/types';
-import type { jsmediatags as jsmediatagsType } from 'jsmediatags/types';
 
 export default function LibraryPage() {
   const { user, isUserLoading } = useUser();
@@ -24,14 +23,7 @@ export default function LibraryPage() {
   const { toast } = useToast();
   const [localSongs, setLocalSongs] = useState<Song[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const jsmediatagsRef = useRef<typeof jsmediatagsType | null>(null);
 
-  useEffect(() => {
-    import('jsmediatags').then(mod => {
-      jsmediatagsRef.current = mod.default;
-    });
-  }, []);
-  
   const playlistsQuery = useMemoFirebase(() => 
     user && firestore ? collection(firestore, 'users', user.uid, 'playlists') : null,
     [user, firestore]
@@ -79,58 +71,28 @@ export default function LibraryPage() {
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files || !jsmediatagsRef.current) return;
-    const jsmediatags = jsmediatagsRef.current;
+    if (!files) return;
 
-    const newSongsPromises = Array.from(files)
+    const newSongs = Array.from(files)
       .filter(file => file.type.startsWith('audio/') || file.type.startsWith('video/'))
       .map((file, index) => {
-        return new Promise<Song>((resolve) => {
-          jsmediatags.read(file, {
-            onSuccess: (tag) => {
-              const { title, artist, album, picture } = tag.tags;
-              let albumArt = "https://picsum.photos/seed/local-default/400/400";
-              if (picture) {
-                const { data, format } = picture;
-                const base64String = data.reduce((acc, byte) => acc + String.fromCharCode(byte), '');
-                albumArt = `data:${format};base64,${window.btoa(base64String)}`;
-              }
-              
-              resolve({
-                id: `local-${file.name}-${index}`,
-                title: title || file.name.replace(/\.[^/.]+$/, ""),
-                artist: artist || "Unknown Artist",
-                album: album || "Local Files",
-                albumId: "local",
-                albumArt: albumArt,
-                duration: "N/A",
-                audioSrc: URL.createObjectURL(file),
-              });
-            },
-            onError: () => {
-              // Fallback if metadata reading fails
-              resolve({
-                id: `local-${file.name}-${index}`,
-                title: file.name.replace(/\.[^/.]+$/, ""),
-                artist: "Unknown Artist",
-                album: "Local Files",
-                albumId: "local",
-                albumArt: "https://picsum.photos/seed/local-default/400/400",
-                duration: "N/A",
-                audioSrc: URL.createObjectURL(file),
-              });
-            }
-          });
-        });
+        return {
+          id: `local-${file.name}-${index}`,
+          title: file.name.replace(/\.[^/.]+$/, ""),
+          artist: "Unknown Artist",
+          album: "Local Files",
+          albumId: "local",
+          albumArt: "https://picsum.photos/seed/local-default/400/400",
+          duration: "N/A",
+          audioSrc: URL.createObjectURL(file),
+        };
       });
 
-      Promise.all(newSongsPromises).then(newSongs => {
-        setLocalSongs(currentSongs => [...currentSongs, ...newSongs]);
-        toast({
-            title: `${newSongs.length} file(s) added`,
-            description: "These files are available for this session only.",
-        });
-      })
+    setLocalSongs(currentSongs => [...currentSongs, ...newSongs]);
+    toast({
+        title: `${newSongs.length} file(s) added`,
+        description: "These files are available for this session only.",
+    });
   };
 
   const handleSelectFilesClick = () => {

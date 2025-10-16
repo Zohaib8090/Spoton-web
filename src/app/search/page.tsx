@@ -9,6 +9,7 @@ import { usePlayer } from "@/context/player-context";
 import { Button } from "@/components/ui/button";
 import { searchYoutube } from "@/ai/flows/youtube-search";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 type YoutubeResult = {
     id: string;
@@ -22,7 +23,7 @@ export default function SearchPage() {
   const [query, setQuery] = useState("");
   const [youtubeResults, setYoutubeResults] = useState<YoutubeResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const { playSong } = usePlayer();
+  const { playSong, currentSong, isPlaying } = usePlayer();
   const { toast } = useToast();
 
   const handleYoutubeSearch = async (searchQuery: string) => {
@@ -107,34 +108,43 @@ export default function SearchPage() {
       {youtubeResults.length > 0 && (
         <div className="flex flex-col gap-2">
           <h2 className="text-xl font-bold">YouTube Results</h2>
-          {youtubeResults.map((result) => (
-            <div key={result.id} className="flex items-center p-2 rounded-md hover:bg-muted/50 transition-colors group">
-              <Image 
-                src={result.thumbnail}
-                alt={result.title}
-                width={40}
-                height={40}
-                className="rounded-md mr-4"
-                unoptimized
-              />
-              <div className="flex-grow min-w-0">
-                <p className="font-semibold truncate">{result.title}</p>
-                <p className="text-sm text-muted-foreground truncate">{result.artist}</p>
-              </div>
-              <div className="text-sm text-muted-foreground mr-4 hidden sm:block">
-                {result.duration}
-              </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="opacity-0 group-hover:opacity-100 flex-shrink-0"
-                onClick={() => handlePlayYoutube(result)}
-                aria-label={`Play ${result.title}`}
-              >
-                <Play className="h-5 w-5" />
-              </Button>
-            </div>
-          ))}
+          {youtubeResults.map((result) => {
+            const isActive = currentSong?.id === result.id;
+            return (
+                <div 
+                    key={result.id} 
+                    className={cn(
+                        "flex items-center p-2 rounded-md hover:bg-muted/50 transition-colors group cursor-pointer",
+                        isActive && "bg-muted"
+                    )}
+                    onClick={() => handlePlayYoutube(result)}
+                >
+                <Image 
+                    src={result.thumbnail}
+                    alt={result.title}
+                    width={40}
+                    height={40}
+                    className="rounded-md mr-4"
+                    unoptimized
+                />
+                <div className="flex-grow min-w-0">
+                    <p className={cn("font-semibold truncate", isActive && "text-primary")}>{result.title}</p>
+                    <p className="text-sm text-muted-foreground truncate">{result.artist}</p>
+                </div>
+                <div className="text-sm text-muted-foreground mr-4 hidden sm:block">
+                    {result.duration}
+                </div>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="opacity-0 group-hover:opacity-100 flex-shrink-0"
+                    aria-label={`Play ${result.title}`}
+                >
+                    <Play className="h-5 w-5" />
+                </Button>
+                </div>
+            )
+          })}
         </div>
       )}
     </div>

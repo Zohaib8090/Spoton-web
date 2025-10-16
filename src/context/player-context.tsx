@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef, Dispatch, SetStateAction } from 'react';
@@ -109,6 +110,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       autoPlay: true,
       monoAudio: false,
       equaliserEnabled: false,
+      balance: 0,
   };
   const trackTransitions = userData?.settings?.trackTransitions || { gaplessPlayback: true, automix: false, crossfade: 0 };
   
@@ -186,24 +188,23 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         lastNode = filter;
       });
     }
-
-    // Mono audio setup
-    if (listeningControls.monoAudio) {
-      if (!pannerNodeRef.current) {
+    
+    // Panner setup for both mono and balance
+    if (!pannerNodeRef.current) {
         pannerNodeRef.current = audioContext.createStereoPanner();
-      }
-      pannerNodeRef.current.pan.value = 0; // Center pan for mono
-      lastNode.connect(pannerNodeRef.current);
-      lastNode = pannerNodeRef.current;
-    } else {
-        if (pannerNodeRef.current) {
-            pannerNodeRef.current.pan.value = 0; // Reset pan
-        }
     }
+    if (listeningControls.monoAudio) {
+      pannerNodeRef.current.pan.value = 0; // Center pan for mono
+    } else {
+      pannerNodeRef.current.pan.value = listeningControls.balance;
+    }
+    lastNode.connect(pannerNodeRef.current);
+    lastNode = pannerNodeRef.current;
+    
 
     lastNode.connect(audioContext.destination);
 
-  }, [audioElement, isEqEnabled, listeningControls.monoAudio, equaliserSettings]);
+  }, [audioElement, isEqEnabled, listeningControls.monoAudio, listeningControls.balance, equaliserSettings]);
 
   useEffect(() => {
     setupAudioContext();
@@ -727,3 +728,5 @@ export function usePlayer(): PlayerContextType {
   }
   return context;
 }
+
+    

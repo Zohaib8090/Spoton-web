@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { BellRing, Video, Music, Wifi, Signal, Youtube, Mail, GitBranch, Play, Speaker, Equalizer, Ear } from 'lucide-react';
+import { BellRing, Video, Music, Wifi, Signal, Youtube, Mail, GitBranch, Play, Speaker, Equalizer, Ear, Headphones } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
@@ -61,6 +61,7 @@ export default function SettingsPage() {
     monoAudio: false,
     equaliserEnabled: false,
     volumeNormalization: true,
+    balance: 0,
   });
   
   const [isEqDialogOpen, setIsEqDialogOpen] = useState(false);
@@ -85,7 +86,7 @@ export default function SettingsPage() {
       setTrackTransitions(userData.settings.trackTransitions);
     }
     if (userData?.settings?.listeningControls) {
-      setListeningControls(userData.settings.listeningControls);
+      setListeningControls(prev => ({ ...prev, ...userData.settings.listeningControls }));
     }
   }, [user, isUserLoading, router, userData]);
 
@@ -154,11 +155,18 @@ export default function SettingsPage() {
     updateSetting('trackTransitions', newTransitions);
   };
 
-  const handleListeningControlChange = (control: keyof typeof listeningControls, value: boolean) => {
+  const handleListeningControlChange = (control: keyof Omit<typeof listeningControls, 'balance'>, value: boolean) => {
     const newControls = { ...listeningControls, [control]: value };
     setListeningControls(newControls);
     updateSetting('listeningControls', newControls);
   };
+
+  const handleBalanceChange = (value: number[]) => {
+      const newControls = { ...listeningControls, balance: value[0] };
+      setListeningControls(newControls);
+      updateSetting('listeningControls', newControls);
+  };
+
 
   const handleNotificationPermission = async () => {
     if (!('Notification' in window)) {
@@ -352,6 +360,26 @@ export default function SettingsPage() {
                 checked={listeningControls.monoAudio}
                 onCheckedChange={(checked) => handleListeningControlChange('monoAudio', checked)}
               />
+            </div>
+            <div className="space-y-3 rounded-lg border p-4">
+                <Label htmlFor="balance" className="flex flex-col space-y-1">
+                    <span>Audio Balance</span>
+                    <span className="font-normal leading-snug text-muted-foreground">
+                        Adjust the audio output between left and right channels.
+                    </span>
+                </Label>
+                 <div className="flex items-center gap-4">
+                    <span className="text-xs font-bold w-4 text-center">L</span>
+                    <Slider
+                        id="balance"
+                        min={-1}
+                        max={1}
+                        step={0.1}
+                        value={[listeningControls.balance]}
+                        onValueChange={handleBalanceChange}
+                    />
+                    <span className="text-xs font-bold w-4 text-center">R</span>
+                </div>
             </div>
             <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
               <Label htmlFor="equaliser" className="flex flex-col space-y-1">
@@ -568,3 +596,5 @@ export default function SettingsPage() {
     </>
   );
 }
+
+    

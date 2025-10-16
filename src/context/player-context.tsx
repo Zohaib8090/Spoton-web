@@ -473,7 +473,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     const baseVolume = listeningControls.volumeNormalization ? 0.8 : 1;
     if (audioElement) audioElement.volume = baseVolume;
-    if (youtubePlayer && typeof youtubePlayer.setVolume === 'function') {
+    if (youtubePlayer && typeof youtubePlayer.setVolume === 'function' && youtubePlayer.getIframe?.()?.src) {
       youtubePlayer.setVolume(baseVolume * 100);
     }
     

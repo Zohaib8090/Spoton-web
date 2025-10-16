@@ -29,6 +29,7 @@ export function Player() {
     playPrev,
     closePlayer,
     audioElement,
+    toggleFullScreenPlayer,
   } = usePlayer();
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState("0:00");
@@ -119,7 +120,10 @@ export function Player() {
       onTouchEnd={handleTouchEnd}
     >
       <div className="grid grid-cols-[auto_1fr_auto] items-center gap-4">
-        <div className="flex items-center gap-3 w-64 min-w-0">
+        <div 
+            className="flex items-center gap-3 w-64 min-w-0 cursor-pointer"
+            onClick={toggleFullScreenPlayer}
+        >
           {currentSong ? (
             <>
               <Image
@@ -186,7 +190,7 @@ export function Player() {
             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><Volume2 size={18}/></Button>
             <Slider defaultValue={[100]} max={100} step={1} className="h-1" />
           </div>
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><Maximize2 size={18}/></Button>
+          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={toggleFullScreenPlayer}><Maximize2 size={18}/></Button>
         </div>
       </div>
     </div>

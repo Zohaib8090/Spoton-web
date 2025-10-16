@@ -10,6 +10,8 @@ interface PlayerContextType {
   isPlaying: boolean;
   playlist: Song[];
   listeningHistory: string[];
+  isFullScreenPlayerOpen: boolean;
+  toggleFullScreenPlayer: () => void;
   playSong: (song: Song, playlist?: Song[]) => void;
   togglePlay: () => void;
   playNext: () => void;
@@ -26,6 +28,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [playlist, setPlaylist] = useState<Song[]>([]);
   const [listeningHistory, setListeningHistory] = useState<string[]>([]);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [isFullScreenPlayerOpen, setIsFullScreenPlayerOpen] = useState(false);
   const { toast } = useToast();
   
   const currentSongRef = useRef(currentSong);
@@ -123,7 +126,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
     setCurrentSong(null);
     setIsPlaying(false);
+    setIsFullScreenPlayerOpen(false);
   }, [audioElement, currentSong]);
+
+  const toggleFullScreenPlayer = useCallback(() => {
+    if (currentSong) {
+        setIsFullScreenPlayerOpen(prev => !prev);
+    }
+  }, [currentSong]);
 
   const value = {
     currentSong,
@@ -136,6 +146,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     playPrev,
     closePlayer,
     audioElement,
+    isFullScreenPlayerOpen,
+    toggleFullScreenPlayer
   };
 
   return (

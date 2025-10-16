@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -15,6 +16,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { Player } from "@/components/player";
+import { FullScreenPlayer } from "@/components/full-screen-player";
 import { Button } from "@/components/ui/button";
 import { SpotonLogo } from "@/components/spoton-logo";
 import { usePlayer } from "@/context/player-context";
@@ -132,6 +134,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   </nav>
                 )}
             </div>
+            {currentSong && <FullScreenPlayer />}
           </div>
         </SidebarInset>
       </div>

@@ -101,7 +101,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       autoPlay: true,
       monoAudio: false,
   };
-  const trackTransitions = userData?.settings?.trackTransitions || { automix: false, crossfade: 0 };
+  const trackTransitions = userData?.settings?.trackTransitions || { gaplessPlayback: true, automix: false, crossfade: 0 };
 
 
   const { toast } = useToast();
@@ -115,8 +115,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const nextSongTriggeredRef = useRef(false);
 
   const handleSongEnd = useCallback(() => {
-    playNextRef.current();
-  }, []);
+    if (trackTransitions.gaplessPlayback && !nextSongTriggeredRef.current) {
+        playNextRef.current();
+    }
+  }, [trackTransitions.gaplessPlayback]);
 
   useEffect(() => {
     const audio = new Audio();
@@ -539,7 +541,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const onPlayerStateChange = (event: any) => {
     // 0 = ended
     if (event.data === 0) {
-      handleSongEnd();
+      if (trackTransitions.gaplessPlayback) {
+          playNextRef.current();
+      } else {
+          handleSongEnd();
+      }
     }
   };
   
@@ -636,3 +642,5 @@ export function usePlayer(): PlayerContextType {
   }
   return context;
 }
+
+    

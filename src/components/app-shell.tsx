@@ -72,7 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     </SidebarMenuItem>
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild isActive={isActive('/whats-new')} className="hover:text-foreground">
-                        <Link href="#"><Bell /> <span>What's new</span></Link>
+                        <Link href="/whats-new"><Bell /> <span>What's new</span></Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>

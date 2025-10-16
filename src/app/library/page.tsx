@@ -7,20 +7,20 @@ import { useEffect, useState, useRef } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlbumArtwork } from '@/components/album-artwork';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { collection, addDoc, serverTimestamp }from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Music, FolderUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { errorEmitter, FirestorePermissionError } from '@/firebase';
 import { PlaylistContent } from '@/components/playlist-content';
 import type { Song } from '@/lib/types';
+import { usePlayer } from '@/context/player-context';
 
 export default function LibraryPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+  const { handleCreatePlaylist } = usePlayer();
   const [localSongs, setLocalSongs] = useState<Song[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -35,39 +35,6 @@ export default function LibraryPage() {
       router.push('/login');
     }
   }, [user, isUserLoading, router]);
-
-  const handleCreatePlaylist = () => {
-    if (!user || !firestore) return;
-    
-    const randomCover = PlaceHolderImages[Math.floor(Math.random() * PlaceHolderImages.length)].imageUrl;
-
-    const newPlaylistData = {
-      name: 'My New Playlist',
-      description: 'A collection of my favorite tracks.',
-      trackIds: [],
-      createdAt: serverTimestamp(),
-      coverArt: randomCover,
-      userId: user.uid,
-    };
-
-    const playlistsCollection = collection(firestore, 'users', user.uid, 'playlists');
-
-    addDoc(playlistsCollection, newPlaylistData)
-      .then(() => {
-          toast({
-            title: 'Playlist created!',
-            description: 'Your new playlist has been added to your library.',
-          });
-      })
-      .catch((serverError) => {
-          const permissionError = new FirestorePermissionError({
-              path: playlistsCollection.path,
-              operation: 'create',
-              requestResourceData: newPlaylistData,
-          });
-          errorEmitter.emit('permission-error', permissionError);
-      });
-  };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;

@@ -27,7 +27,7 @@ import { useRouter } from "next/navigation";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { currentSong } = usePlayer();
+  const { currentSong, handleCreatePlaylist } = usePlayer();
   const { user } = useUser();
   const auth = useAuth();
   const router = useRouter();
@@ -101,9 +101,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SidebarInset>
           <div className="flex flex-col h-full">
             <main className={cn("flex-1 overflow-y-auto p-4 md:p-6 lg:p-8", {
-              "pb-36": currentSong && showBottomNav,
-              "pb-20": !currentSong && showBottomNav,
-              "pb-24": currentSong && !showBottomNav,
+              "pb-36": currentSong,
+              "pb-20": !currentSong,
             })}>
               <div className="flex items-center gap-4">
                 <SidebarTrigger className="md:hidden" />
@@ -127,7 +126,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         <Library size={24} />
                         <span className="text-xs font-medium">Library</span>
                       </Link>
-                      <Button variant="ghost" className="flex flex-col items-center gap-1 h-auto p-2 hover:text-foreground">
+                      <Button variant="ghost" onClick={handleCreatePlaylist} className="flex flex-col items-center gap-1 h-auto p-2 hover:text-foreground">
                         <Plus size={24} />
                         <span className="text-xs font-medium">Create Playlist</span>
                       </Button>

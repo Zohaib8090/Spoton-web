@@ -7,8 +7,9 @@ import type { Song } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import YouTube from 'react-youtube';
 import { cn } from '@/lib/utils';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { doc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 type LoopMode = 'none' | 'playlist' | 'song';
 export type Quality = 'automatic' | 'high' | 'standard' | 'low' | 'very-high';
@@ -54,6 +55,7 @@ interface PlayerContextType {
   closePlayer: () => void;
   toggleShuffle: () => void;
   toggleLoop: () => void;
+  handleCreatePlaylist: () => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -362,6 +364,39 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       handleSongEnd();
     }
   };
+  
+  const handleCreatePlaylist = () => {
+    if (!user || !firestore) return;
+    
+    const randomCover = PlaceHolderImages[Math.floor(Math.random() * PlaceHolderImages.length)].imageUrl;
+
+    const newPlaylistData = {
+      name: 'My New Playlist',
+      description: 'A collection of my favorite tracks.',
+      trackIds: [],
+      createdAt: serverTimestamp(),
+      coverArt: randomCover,
+      userId: user.uid,
+    };
+
+    const playlistsCollection = collection(firestore, 'users', user.uid, 'playlists');
+
+    addDoc(playlistsCollection, newPlaylistData)
+      .then(() => {
+          toast({
+            title: 'Playlist created!',
+            description: 'Your new playlist has been added to your library.',
+          });
+      })
+      .catch((serverError) => {
+          const permissionError = new FirestorePermissionError({
+              path: playlistsCollection.path,
+              operation: 'create',
+              requestResourceData: newPlaylistData,
+          });
+          errorEmitter.emit('permission-error', permissionError);
+      });
+  };
 
   const value = {
     currentSong,
@@ -391,6 +426,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     toggleShowVideo,
     setYoutubePlayer,
     setCurrentTime,
+    handleCreatePlaylist,
   };
 
   return (

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
@@ -13,12 +14,15 @@ import {
   ListMusic,
   Laptop2,
   Volume2,
-  Maximize2
+  Maximize2,
+  VolumeX,
+  Volume1
 } from "lucide-react";
 import { usePlayer } from "@/context/player-context";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export function Player() {
   const {
@@ -32,6 +36,8 @@ export function Player() {
     youtubePlayer,
     toggleFullScreenPlayer,
     toggleQueue,
+    gain,
+    setGain
   } = usePlayer();
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState("0:00");
@@ -123,6 +129,16 @@ export function Player() {
   
   const displayDuration = currentSong?.duration !== "0:00" ? currentSong?.duration : duration;
 
+  const handleGainChange = (value: number[]) => {
+    setGain(value[0]);
+  };
+  
+  const getVolumeIcon = () => {
+    if (gain <= -6) return <VolumeX size={18} />;
+    if (gain > -6 && gain < 0) return <Volume1 size={18} />;
+    return <Volume2 size={18} />;
+  }
+
   return (
     <div
       ref={playerRef}
@@ -200,9 +216,25 @@ export function Player() {
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={toggleQueue}><Mic2 size={18}/></Button>
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={toggleQueue}><ListMusic size={18}/></Button>
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><Laptop2 size={18}/></Button>
-          <div className="flex items-center gap-2 w-32">
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><Volume2 size={18}/></Button>
-            <Slider defaultValue={[100]} max={100} step={1} className="h-1" />
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+                    {getVolumeIcon()}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-2" side="top">
+                  <Slider 
+                    orientation="vertical" 
+                    min={-12} 
+                    max={12}
+                    step={0.5}
+                    value={[gain]}
+                    onValueChange={handleGainChange} 
+                    className="h-24"
+                  />
+              </PopoverContent>
+            </Popover>
           </div>
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={toggleFullScreenPlayer}><Maximize2 size={18}/></Button>
         </div>
@@ -210,3 +242,6 @@ export function Player() {
     </div>
   );
 }
+
+
+    

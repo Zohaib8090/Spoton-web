@@ -99,7 +99,8 @@
                 "monoAudio": { "type": "boolean" },
                 "equaliserEnabled": { "type": "boolean" },
                 "volumeNormalization": { "type": "boolean" },
-                "balance": { "type": "number", "description": "Audio balance from -1 (left) to 1 (right)." }
+                "balance": { "type": "number", "description": "Audio balance from -1 (left) to 1 (right)." },
+                "gain": { "type": "number", "description": "Audio gain in decibels." }
               }
             },
              "equaliser": {
@@ -295,5 +296,6 @@
     "reasoning": "The Firestore structure is designed to manage users, playlists, and tracks, with a focus on scalability and security. User data is stored in a dedicated collection, while playlists are stored within each user's document using a subcollection. Tracks are stored in a global collection, since Tracks are not owned by users.\n\nThis design prioritizes **Authorization Independence**. Specifically, there is no `get()` call in security rules.\n\nThe design supports the required QAPs:\n\n*   **Secure Lists:**  Path-based ownership (`/users/{userId}/playlists/{playlistId}`) enables secure list operations for playlists, as rules can easily filter based on `request.auth.uid == userId`.\n\n*   **DBAC:**  Roles are derived from `request.auth.uid` and path-based ownership, precluding the need for custom claims.\n"
   }
 }
+    
 
     

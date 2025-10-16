@@ -48,6 +48,8 @@ interface PlayerContextType {
   youtubePlayer: any | null; // YouTube player instance
   isEqEnabled: boolean;
   equaliserSettings: number[];
+  gain: number;
+  setGain: (gain: number) => void;
   setLyrics: Dispatch<SetStateAction<LyricLine[]>>;
   setIsLyricsLoading: Dispatch<SetStateAction<boolean>>;
   setYoutubePlayer: Dispatch<SetStateAction<any | null>>;
@@ -89,6 +91,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const pannerNodeRef = useRef<StereoPannerNode | null>(null);
+  const gainNodeRef = useRef<GainNode | null>(null);
   const fadeIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const eqNodesRef = useRef<BiquadFilterNode[]>([]);
@@ -111,11 +114,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       monoAudio: false,
       equaliserEnabled: false,
       balance: 0,
+      gain: 0,
   };
   const trackTransitions = userData?.settings?.trackTransitions || { gaplessPlayback: true, automix: false, crossfade: 0 };
   
   const [equaliserSettings, _setEqualiserSettings] = useState<number[]>(userData?.settings?.equaliser || DEFAULT_EQ_SETTINGS);
   const [isEqEnabled, setIsEqEnabled] = useState(listeningControls.equaliserEnabled);
+  const [gain, _setGain] = useState(listeningControls.gain);
 
 
   const { toast } = useToast();
@@ -201,11 +206,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
     lastNode.connect(pannerNodeRef.current);
     lastNode = pannerNodeRef.current;
-    
 
+    // Gain setup
+    if (!gainNodeRef.current) {
+      gainNodeRef.current = audioContext.createGain();
+    }
+    // Convert dB to linear gain value
+    gainNodeRef.current.gain.value = Math.pow(10, gain / 20);
+    lastNode.connect(gainNodeRef.current);
+    lastNode = gainNodeRef.current;
+    
     lastNode.connect(audioContext.destination);
 
-  }, [audioElement, isEqEnabled, listeningControls.monoAudio, listeningControls.balance, equaliserSettings]);
+  }, [audioElement, isEqEnabled, listeningControls, gain, equaliserSettings]);
 
   useEffect(() => {
     setupAudioContext();
@@ -214,6 +227,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setIsEqEnabled(listeningControls.equaliserEnabled);
   }, [listeningControls.equaliserEnabled]);
+
+  useEffect(() => {
+    _setGain(listeningControls.gain);
+  }, [listeningControls.gain]);
+
+  const setGain = (newGain: number) => {
+    _setGain(newGain);
+    if(userDocRef) {
+      setDoc(userDocRef, { settings: { listeningControls: { gain: newGain } } }, { merge: true });
+    }
+  };
   
   const setEqualiserSettings = (settings: number[]) => {
     _setEqualiserSettings(settings);
@@ -702,6 +726,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setEqualiserSettings,
     isEqEnabled,
     toggleEq,
+    gain,
+    setGain
   };
 
   return (
@@ -733,3 +759,5 @@ export function usePlayer(): PlayerContextType {
   }
   return context;
 }
+
+    

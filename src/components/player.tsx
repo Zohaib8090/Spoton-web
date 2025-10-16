@@ -63,7 +63,7 @@ export function Player() {
   };
 
   return (
-    <footer className="w-full bg-black border-t border-border px-4 py-3 text-foreground">
+    <div className="w-full bg-black border-t border-border px-4 py-3 text-foreground">
       <div className="grid grid-cols-[auto_1fr_auto] items-center gap-4">
         <div className="flex items-center gap-3 w-64 min-w-0">
           {currentSong ? (
@@ -135,6 +135,6 @@ export function Player() {
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><Maximize2 size={18}/></Button>
         </div>
       </div>
-    </footer>
+    </div>
   );
 }

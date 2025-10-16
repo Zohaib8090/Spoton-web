@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Image from "next/image";
 import {
   Play,
@@ -32,6 +32,7 @@ export function FullScreenPlayer() {
     playNext,
     playPrev,
     audioElement,
+    youtubePlayer,
     isFullScreenPlayerOpen,
     toggleFullScreenPlayer,
     shuffle,
@@ -42,6 +43,7 @@ export function FullScreenPlayer() {
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState("0:00");
   const [currentTime, setCurrentTime] = useState("0:00");
+  const progressUpdateRef = useRef<number>();
 
   const formatTime = (time: number) => {
     if (isNaN(time)) return "0:00";
@@ -50,45 +52,58 @@ export function FullScreenPlayer() {
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
-  const onTimeUpdate = useCallback(() => {
-    if (audioElement) {
+  const updateProgress = useCallback(() => {
+    if (currentSong?.isFromYouTube && youtubePlayer?.getDuration) {
+      const ytCurrentTime = youtubePlayer.getCurrentTime();
+      const ytDuration = youtubePlayer.getDuration();
+      if (ytDuration > 0) {
+        setProgress((ytCurrentTime / ytDuration) * 100);
+        setCurrentTime(formatTime(ytCurrentTime));
+        setDuration(formatTime(ytDuration));
+      }
+    } else if (audioElement?.duration) {
       setProgress((audioElement.currentTime / audioElement.duration) * 100);
       setCurrentTime(formatTime(audioElement.currentTime));
+      setDuration(formatTime(audioElement.duration));
     }
-  }, [audioElement]);
-
-  const onLoadedData = useCallback(() => {
-    if (audioElement) {
-        setDuration(formatTime(audioElement.duration));
+    if (isFullScreenPlayerOpen) {
+      progressUpdateRef.current = requestAnimationFrame(updateProgress);
     }
-  }, [audioElement]);
-
+  }, [audioElement, currentSong, youtubePlayer, isFullScreenPlayerOpen]);
+  
   useEffect(() => {
-    if (audioElement) {
-      audioElement.addEventListener("timeupdate", onTimeUpdate);
-      audioElement.addEventListener("loadedmetadata", onLoadedData);
-      audioElement.addEventListener("durationchange", onLoadedData);
-      return () => {
-        audioElement.removeEventListener("timeupdate", onTimeUpdate);
-        audioElement.removeEventListener("loadedmetadata", onLoadedData);
-        audioElement.removeEventListener("durationchange", onLoadedData);
-      };
+    if (isPlaying && isFullScreenPlayerOpen) {
+        progressUpdateRef.current = requestAnimationFrame(updateProgress);
+    } else {
+        if(progressUpdateRef.current) {
+            cancelAnimationFrame(progressUpdateRef.current);
+        }
     }
-  }, [audioElement, onTimeUpdate, onLoadedData]);
+
+    return () => {
+        if(progressUpdateRef.current) {
+            cancelAnimationFrame(progressUpdateRef.current);
+        }
+    }
+  }, [isPlaying, isFullScreenPlayerOpen, updateProgress]);
 
   useEffect(() => {
     setProgress(0);
   }, [currentSong]);
 
   const handleProgressChange = (value: number[]) => {
-    if (audioElement) {
-      const newTime = (value[0] / 100) * audioElement.duration;
+    const newProgress = value[0];
+    if (currentSong?.isFromYouTube && youtubePlayer) {
+      const newTime = (newProgress / 100) * youtubePlayer.getDuration();
+      youtubePlayer.seekTo(newTime, true);
+    } else if (audioElement) {
+      const newTime = (newProgress / 100) * audioElement.duration;
       audioElement.currentTime = newTime;
-      setProgress(value[0]);
     }
+    setProgress(newProgress);
   };
   
-  const displayDuration = currentSong?.duration === "N/A" ? duration : currentSong?.duration;
+  const displayDuration = currentSong?.duration !== "0:00" ? currentSong?.duration : duration;
 
   if (!currentSong) return null;
 
@@ -110,11 +125,12 @@ export function FullScreenPlayer() {
                     height={500}
                     className="rounded-lg shadow-2xl aspect-square object-cover w-full max-w-sm"
                     data-ai-hint="album cover"
+                    unoptimized={currentSong.isFromYouTube}
                 />
 
                 <div className="text-center">
-                    <h2 className="text-xl font-bold tracking-tight">{currentSong.title}</h2>
-                    <p className="text-base text-muted-foreground">{currentSong.artist}</p>
+                    <h2 className="text-lg font-bold tracking-tight">{currentSong.title}</h2>
+                    <p className="text-sm text-muted-foreground">{currentSong.artist}</p>
                 </div>
             </div>
 

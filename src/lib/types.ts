@@ -6,7 +6,8 @@ export interface Song {
   album: string;
   albumId: string;
   albumArt: string;
-  audioSrc: string; // This will be a placeholder
+  audioSrc: string; // This will be a placeholder or a blob URL for local files
+  isFromYouTube?: boolean; // Flag to identify YouTube tracks
 }
 
 export interface Album {

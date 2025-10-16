@@ -4,6 +4,7 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef } from 'react';
 import type { Song } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import YouTube from 'react-youtube';
 
 type LoopMode = 'none' | 'playlist' | 'song';
 
@@ -15,6 +16,8 @@ interface PlayerContextType {
   isFullScreenPlayerOpen: boolean;
   shuffle: boolean;
   loop: LoopMode;
+  audioElement: HTMLAudioElement | null;
+  youtubePlayer: any | null; // YouTube player instance
   toggleFullScreenPlayer: () => void;
   playSong: (song: Song, playlist?: Song[]) => void;
   togglePlay: () => void;
@@ -23,7 +26,6 @@ interface PlayerContextType {
   closePlayer: () => void;
   toggleShuffle: () => void;
   toggleLoop: () => void;
-  audioElement: HTMLAudioElement | null;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -35,11 +37,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [shuffledPlaylist, setShuffledPlaylist] = useState<Song[]>([]);
   const [listeningHistory, setListeningHistory] = useState<string[]>([]);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [youtubePlayer, setYoutubePlayer] = useState<any | null>(null);
   const [isFullScreenPlayerOpen, setIsFullScreenPlayerOpen] = useState(false);
   const [shuffle, setShuffle] = useState(false);
   const [loop, setLoop] = useState<LoopMode>('none');
   const { toast } = useToast();
-  
+
   const currentSongRef = useRef(currentSong);
   useEffect(() => {
     currentSongRef.current = currentSong;
@@ -47,25 +50,31 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const playNextRef = useRef<() => void>(() => {});
 
+  const handleSongEnd = useCallback(() => {
+    playNextRef.current();
+  }, []);
+
   useEffect(() => {
     const audio = new Audio();
     setAudioElement(audio);
-
-    const handleEnded = () => {
-      playNextRef.current();
-    };
-    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('ended', handleSongEnd);
 
     return () => {
-      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('ended', handleSongEnd);
       if (currentSongRef.current?.audioSrc?.startsWith('blob:')) {
         URL.revokeObjectURL(currentSongRef.current.audioSrc);
       }
       audio.pause();
     };
-  }, []);
+  }, [handleSongEnd]);
 
   const playSong = useCallback((song: Song, newPlaylist?: Song[]) => {
+    if (currentSong?.isFromYouTube && youtubePlayer) {
+      youtubePlayer.stopVideo();
+    } else if (audioElement) {
+      audioElement.pause();
+    }
+    
     setCurrentSong(song);
     setIsPlaying(true);
     
@@ -91,18 +100,23 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       title: "Now Playing",
       description: `${song.title} by ${song.artist}`,
     });
-  }, [toast, shuffle, playlist]);
+  }, [toast, shuffle, playlist, audioElement, youtubePlayer, currentSong]);
 
   const playNext = useCallback(() => {
-    if (loop === 'song' && currentSong && audioElement) {
-      audioElement.currentTime = 0;
-      audioElement.play();
-      return;
-    }
-      
     const activePlaylist = shuffle ? shuffledPlaylist : playlist;
     if (!currentSong || activePlaylist.length === 0) return;
 
+    if (loop === 'song') {
+      if (currentSong.isFromYouTube && youtubePlayer) {
+          youtubePlayer.seekTo(0);
+          youtubePlayer.playVideo();
+      } else if (audioElement) {
+          audioElement.currentTime = 0;
+          audioElement.play();
+      }
+      return;
+    }
+      
     const currentIndex = activePlaylist.findIndex(song => song.id === currentSong.id);
 
     if (currentIndex !== -1) {
@@ -117,7 +131,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       }
       playSong(activePlaylist[nextIndex], playlist);
     }
-  }, [currentSong, playlist, shuffledPlaylist, shuffle, loop, playSong, audioElement]);
+  }, [currentSong, playlist, shuffledPlaylist, shuffle, loop, playSong, audioElement, youtubePlayer]);
 
   useEffect(() => {
     playNextRef.current = playNext;
@@ -129,25 +143,36 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, [loop, audioElement]);
 
-
   useEffect(() => {
-    if (audioElement && currentSong) {
-      if (audioElement.src !== currentSong.audioSrc) {
-        if (audioElement.src.startsWith('blob:')) {
-           URL.revokeObjectURL(audioElement.src);
+    if (currentSong?.isFromYouTube) {
+        if (audioElement) audioElement.pause();
+        if (youtubePlayer) {
+            if (isPlaying) {
+                youtubePlayer.playVideo();
+            } else {
+                youtubePlayer.pauseVideo();
+            }
         }
-        audioElement.src = currentSong.audioSrc;
-      }
-      if (isPlaying) {
-        audioElement.play().catch(e => console.error("Playback failed", e));
-      } else {
-        audioElement.pause();
-      }
-    } else if (audioElement && !currentSong) {
-        audioElement.pause();
-        audioElement.src = '';
+    } else {
+        if (youtubePlayer) youtubePlayer.stopVideo();
+        if (audioElement && currentSong) {
+            if (audioElement.src !== currentSong.audioSrc) {
+                if (audioElement.src.startsWith('blob:')) {
+                    URL.revokeObjectURL(audioElement.src);
+                }
+                audioElement.src = currentSong.audioSrc;
+            }
+            if (isPlaying) {
+                audioElement.play().catch(e => console.error("Playback failed", e));
+            } else {
+                audioElement.pause();
+            }
+        } else if (audioElement && !currentSong) {
+            audioElement.pause();
+            audioElement.src = '';
+        }
     }
-  }, [currentSong, isPlaying, audioElement]);
+  }, [currentSong, isPlaying, audioElement, youtubePlayer]);
 
   const togglePlay = useCallback(() => {
     if (currentSong) {
@@ -167,16 +192,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [currentSong, playlist, shuffledPlaylist, playSong, shuffle]);
   
   const closePlayer = useCallback(() => {
-    if (audioElement) {
-        audioElement.pause();
-        if (currentSong?.audioSrc && currentSong.audioSrc.startsWith('blob:')) {
-           URL.revokeObjectURL(currentSong.audioSrc);
-        }
+    if (audioElement) audioElement.pause();
+    if (youtubePlayer) youtubePlayer.stopVideo();
+    if (currentSong?.audioSrc && currentSong.audioSrc.startsWith('blob:')) {
+        URL.revokeObjectURL(currentSong.audioSrc);
     }
     setCurrentSong(null);
     setIsPlaying(false);
     setIsFullScreenPlayerOpen(false);
-  }, [audioElement, currentSong]);
+  }, [audioElement, youtubePlayer, currentSong]);
 
   const toggleFullScreenPlayer = useCallback(() => {
     if (currentSong) {
@@ -184,7 +208,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, [currentSong]);
 
-  const toggleShuffle = useCallback(() => {
+  const toggleShuffle = () => {
     const newShuffleState = !shuffle;
     setShuffle(newShuffleState);
     if (newShuffleState) {
@@ -193,23 +217,37 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     } else {
         toast({ description: "Shuffle disabled" });
     }
-  }, [shuffle, playlist, toast]);
+  };
 
-  const toggleLoop = useCallback(() => {
-    setLoop(current => {
-      if (current === 'none') {
-        toast({ description: "Looping playlist" });
-        return 'playlist';
-      }
-      if (current === 'playlist') {
-        toast({ description: "Looping song" });
-        return 'song';
-      }
-      toast({ description: "Looping disabled" });
-      return 'none';
-    });
-  }, [toast]);
-
+  const toggleLoop = () => {
+    let newLoopMode: LoopMode;
+    let description = "";
+    
+    if (loop === 'none') {
+        newLoopMode = 'playlist';
+        description = "Looping playlist";
+    } else if (loop === 'playlist') {
+        newLoopMode = 'song';
+        description = "Looping song";
+    } else {
+        newLoopMode = 'none';
+        description = "Looping disabled";
+    }
+    
+    setLoop(newLoopMode);
+    toast({ description });
+  };
+  
+  const onPlayerReady = (event: any) => {
+    setYoutubePlayer(event.target);
+  };
+  
+  const onPlayerStateChange = (event: any) => {
+    // 0 = ended
+    if (event.data === 0) {
+      handleSongEnd();
+    }
+  };
 
   const value = {
     currentSong,
@@ -222,6 +260,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     playPrev,
     closePlayer,
     audioElement,
+    youtubePlayer,
     isFullScreenPlayerOpen,
     toggleFullScreenPlayer,
     shuffle,
@@ -233,6 +272,20 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   return (
     <PlayerContext.Provider value={value}>
       {children}
+      <div className="hidden">
+        <YouTube 
+          videoId={currentSong?.isFromYouTube ? currentSong.id : undefined}
+          onReady={onPlayerReady}
+          onStateChange={onPlayerStateChange}
+          opts={{
+            height: '0',
+            width: '0',
+            playerVars: {
+              autoplay: 1,
+            },
+          }}
+        />
+      </div>
     </PlayerContext.Provider>
   );
 }

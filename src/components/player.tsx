@@ -29,6 +29,7 @@ export function Player() {
     playPrev,
     closePlayer,
     audioElement,
+    youtubePlayer,
     toggleFullScreenPlayer,
   } = usePlayer();
   const [progress, setProgress] = useState(0);
@@ -38,6 +39,7 @@ export function Player() {
   const [touchStartY, setTouchStartY] = useState(0);
   const [touchDeltaY, setTouchDeltaY] = useState(0);
   const playerRef = useRef<HTMLDivElement>(null);
+  const progressUpdateRef = useRef<number>();
 
 
   const formatTime = (time: number) => {
@@ -47,31 +49,37 @@ export function Player() {
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
-  const onTimeUpdate = useCallback(() => {
-    if (audioElement) {
+  const updateProgress = useCallback(() => {
+    if (currentSong?.isFromYouTube && youtubePlayer?.getDuration) {
+      const ytCurrentTime = youtubePlayer.getCurrentTime();
+      const ytDuration = youtubePlayer.getDuration();
+      if (ytDuration > 0) {
+        setProgress((ytCurrentTime / ytDuration) * 100);
+        setCurrentTime(formatTime(ytCurrentTime));
+        setDuration(formatTime(ytDuration));
+      }
+    } else if (audioElement?.duration) {
       setProgress((audioElement.currentTime / audioElement.duration) * 100);
       setCurrentTime(formatTime(audioElement.currentTime));
+      setDuration(formatTime(audioElement.duration));
     }
-  }, [audioElement]);
-
-  const onLoadedData = useCallback(() => {
-    if (audioElement) {
-        setDuration(formatTime(audioElement.duration));
-    }
-  }, [audioElement]);
+    progressUpdateRef.current = requestAnimationFrame(updateProgress);
+  }, [audioElement, currentSong, youtubePlayer]);
 
   useEffect(() => {
-    if (audioElement) {
-      audioElement.addEventListener("timeupdate", onTimeUpdate);
-      audioElement.addEventListener("loadedmetadata", onLoadedData);
-      audioElement.addEventListener("durationchange", onLoadedData);
-      return () => {
-        audioElement.removeEventListener("timeupdate", onTimeUpdate);
-        audioElement.removeEventListener("loadedmetadata", onLoadedData);
-        audioElement.removeEventListener("durationchange", onLoadedData);
-      };
+    if (isPlaying) {
+      progressUpdateRef.current = requestAnimationFrame(updateProgress);
+    } else {
+      if (progressUpdateRef.current) {
+        cancelAnimationFrame(progressUpdateRef.current);
+      }
     }
-  }, [audioElement, onTimeUpdate, onLoadedData]);
+    return () => {
+      if (progressUpdateRef.current) {
+        cancelAnimationFrame(progressUpdateRef.current);
+      }
+    };
+  }, [isPlaying, updateProgress]);
 
 
   useEffect(() => {
@@ -81,11 +89,15 @@ export function Player() {
 
 
   const handleProgressChange = (value: number[]) => {
-    if (audioElement) {
-      const newTime = (value[0] / 100) * audioElement.duration;
+    const newProgress = value[0];
+    if (currentSong?.isFromYouTube && youtubePlayer) {
+      const newTime = (newProgress / 100) * youtubePlayer.getDuration();
+      youtubePlayer.seekTo(newTime, true);
+    } else if (audioElement) {
+      const newTime = (newProgress / 100) * audioElement.duration;
       audioElement.currentTime = newTime;
-      setProgress(value[0]);
     }
+    setProgress(newProgress);
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -107,8 +119,8 @@ export function Player() {
     setTouchStartY(0);
     setTouchDeltaY(0);
   };
-
-  const displayDuration = currentSong?.duration === "N/A" ? duration : currentSong?.duration;
+  
+  const displayDuration = currentSong?.duration !== "0:00" ? currentSong?.duration : duration;
 
   return (
     <div
@@ -133,6 +145,7 @@ export function Player() {
                 height={56}
                 className="rounded-md"
                 data-ai-hint="album cover"
+                unoptimized={currentSong.isFromYouTube}
               />
               <div className="truncate">
                 <p className="font-semibold text-sm truncate hover:underline cursor-pointer">{currentSong.title}</p>

@@ -8,16 +8,18 @@ import type { Playlist, Album } from "@/lib/types";
 import { PlaylistContent } from "@/components/playlist-content";
 import { Clock, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import React from "react";
 
 export default function PlaylistPage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const resolvedParams = React.use(params);
 
   let content: Playlist | Album | undefined;
   let isPlaylist = true;
 
-  content = playlists.find((p) => p.id === params.id);
+  content = playlists.find((p) => p.id === resolvedParams.id);
   if (!content) {
-    content = albums.find((a) => a.id === params.id);
+    content = albums.find((a) => a.id === resolvedParams.id);
     isPlaylist = false;
   }
 

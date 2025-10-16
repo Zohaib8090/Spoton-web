@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { BellRing, Video, Music, Wifi, Signal, Youtube, Mail } from 'lucide-react';
+import { BellRing, Video, Music, Wifi, Signal, Youtube, Mail, GitBranch } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
@@ -48,6 +48,12 @@ export default function SettingsPage() {
     youtubeMusic: true,
   });
 
+  const [trackTransitions, setTrackTransitions] = useState({
+    gaplessPlayback: true,
+    automix: false,
+    crossfade: false,
+  });
+
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
@@ -63,6 +69,9 @@ export default function SettingsPage() {
     }
     if (userData?.settings?.streamingServices) {
         setStreamingServices(userData.settings.streamingServices);
+    }
+    if (userData?.settings?.trackTransitions) {
+      setTrackTransitions(userData.settings.trackTransitions);
     }
   }, [user, isUserLoading, router, userData]);
 
@@ -117,6 +126,12 @@ export default function SettingsPage() {
     };
     setPlaybackQuality(newQuality);
     updateSetting('playbackQuality', newQuality);
+  };
+
+  const handleTrackTransitionChange = (pref: 'gaplessPlayback' | 'automix' | 'crossfade', value: boolean) => {
+    const newTransitions = { ...trackTransitions, [pref]: value };
+    setTrackTransitions(newTransitions);
+    updateSetting('trackTransitions', newTransitions);
   };
 
   const handleNotificationPermission = async () => {
@@ -282,7 +297,7 @@ export default function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Playback</CardTitle>
-          <CardDescription>Adjust your streaming quality.</CardDescription>
+          <CardDescription>Adjust your streaming quality and transitions.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
             <div className="space-y-4">
@@ -369,6 +384,52 @@ export default function SettingsPage() {
                     </RadioGroup>
                   </div>
                 </div>
+            </div>
+            <Separator />
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                  <GitBranch className="h-5 w-5 text-muted-foreground" />
+                  <h3 className="font-semibold">Track Transitions</h3>
+              </div>
+              <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+                <Label htmlFor="gapless-playback" className="flex flex-col space-y-1">
+                  <span>Gapless Playback</span>
+                  <span className="font-normal leading-snug text-muted-foreground">
+                    Allow gapless playback between songs.
+                  </span>
+                </Label>
+                <Switch 
+                  id="gapless-playback" 
+                  checked={trackTransitions.gaplessPlayback}
+                  onCheckedChange={(checked) => handleTrackTransitionChange('gaplessPlayback', checked)}
+                />
+              </div>
+              <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+                <Label htmlFor="automix" className="flex flex-col space-y-1">
+                  <span>Automix</span>
+                  <span className="font-normal leading-snug text-muted-foreground">
+                    Allow smooth transitions between songs.
+                  </span>
+                </Label>
+                <Switch 
+                  id="automix" 
+                  checked={trackTransitions.automix}
+                  onCheckedChange={(checked) => handleTrackTransitionChange('automix', checked)}
+                />
+              </div>
+              <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+                <Label htmlFor="crossfade" className="flex flex-col space-y-1">
+                  <span>Crossfade</span>
+                  <span className="font-normal leading-snug text-muted-foreground">
+                    Fade out the current song as the next one fades in.
+                  </span>
+                </Label>
+                <Switch 
+                  id="crossfade" 
+                  checked={trackTransitions.crossfade}
+                  onCheckedChange={(checked) => handleTrackTransitionChange('crossfade', checked)}
+                />
+              </div>
             </div>
         </CardContent>
       </Card>

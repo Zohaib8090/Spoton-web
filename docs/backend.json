@@ -81,6 +81,15 @@
                   "description": "Whether YouTube Music is enabled."
                 }
               }
+            },
+            "trackTransitions": {
+              "type": "object",
+              "description": "User's track transition preferences.",
+              "properties": {
+                "gaplessPlayback": { "type": "boolean" },
+                "automix": { "type": "boolean" },
+                "crossfade": { "type": "boolean" }
+              }
             }
           }
         }

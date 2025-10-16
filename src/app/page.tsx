@@ -1,9 +1,34 @@
+"use client";
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUser } from '@/firebase';
 import { AlbumArtwork } from "@/components/album-artwork";
 import { MadeForYou } from "@/components/made-for-you";
 import { albums, playlists } from "@/lib/data";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Home() {
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router]);
+
+  if (isUserLoading || !user) {
+    return (
+      <div className="space-y-8">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-40 w-full" />
+      </div>
+    );
+  }
+  
   const featuredAlbums = albums.slice(0, 6);
   const featuredPlaylists = playlists.slice(0, 4);
 

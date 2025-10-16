@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Search, Library, Plus, User, Bell, Settings } from "lucide-react";
+import { Home, Search, Library, Plus, User, Bell, Settings, LogOut } from "lucide-react";
 import {
   SidebarProvider,
   Sidebar,
@@ -19,15 +19,32 @@ import { Button } from "@/components/ui/button";
 import { SpotonLogo } from "@/components/spoton-logo";
 import { usePlayer } from "@/context/player-context";
 import { cn } from "@/lib/utils";
+import { useAuth, useUser } from "@/firebase";
+import { signOut } from "firebase/auth";
+import { useRouter } from "next/navigation";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { currentSong } = usePlayer();
+  const { user } = useUser();
+  const auth = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push('/login');
+  };
   
   const isActive = (path: string) => {
     if (path === '/') return pathname === '/';
     return pathname.startsWith(path);
   };
+  
+  // Don't render the shell on login/signup pages
+  if (pathname === '/login' || pathname === '/signup') {
+    return <>{children}</>;
+  }
+
 
   return (
     <SidebarProvider defaultOpen={false}>
@@ -51,21 +68,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Link href="/search"><Search /> <span>Search</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive('/profile')} className="hover:text-foreground">
-                    <Link href="#"><User /> <span>View Profile</span></Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive('/whats-new')} className="hover:text-foreground">
-                    <Link href="#"><Bell /> <span>What's new</span></Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive('/settings')} className="hover:text-foreground">
-                    <Link href="#"><Settings /> <span>Settings</span></Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {user && (
+                  <>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={isActive('/profile')} className="hover:text-foreground">
+                        <Link href="#"><User /> <span>View Profile</span></Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={isActive('/whats-new')} className="hover:text-foreground">
+                        <Link href="#"><Bell /> <span>What's new</span></Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={isActive('/settings')} className="hover:text-foreground">
+                        <Link href="#"><Settings /> <span>Settings</span></Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton onClick={handleLogout} className="hover:text-foreground">
+                        <LogOut /> <span>Logout</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </>
+                )}
               </SidebarMenu>
             </div>
           </SidebarContent>

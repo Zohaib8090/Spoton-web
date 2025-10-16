@@ -82,7 +82,7 @@ export function Player() {
                 <p className="font-semibold text-sm truncate hover:underline cursor-pointer">{currentSong.title}</p>
                 <p className="text-xs text-muted-foreground truncate hover:underline cursor-pointer">{currentSong.artist}</p>
               </div>
-              <Button variant="ghost" size="icon" className="ml-2 hidden sm:inline-flex text-accent">
+              <Button variant="ghost" size="icon" className="hidden sm:inline-flex text-accent">
                 <Heart className="h-4 w-4 fill-current" />
               </Button>
             </>

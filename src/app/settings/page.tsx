@@ -368,8 +368,7 @@ export default function SettingsPage() {
                         Adjust the audio output between left and right channels.
                     </span>
                 </Label>
-                 <div className="flex items-center gap-4">
-                    <span className="text-xs font-bold w-4 text-center">L</span>
+                 <div className="relative pt-2">
                     <Slider
                         id="balance"
                         min={-1}
@@ -378,7 +377,11 @@ export default function SettingsPage() {
                         value={[listeningControls.balance]}
                         onValueChange={handleBalanceChange}
                     />
-                    <span className="text-xs font-bold w-4 text-center">R</span>
+                    <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                        <span className="w-4 text-center">L</span>
+                        <span>Center</span>
+                        <span className="w-4 text-center">R</span>
+                    </div>
                 </div>
             </div>
             <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
@@ -596,5 +599,3 @@ export default function SettingsPage() {
     </>
   );
 }
-
-    

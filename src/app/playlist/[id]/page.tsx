@@ -5,19 +5,30 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
 import { PlaylistContent } from "@/components/playlist-content";
-import { Clock, ChevronLeft } from "lucide-react";
+import { Clock, ChevronLeft, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
-import { doc } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { Playlist, Album, Song } from "@/lib/types";
 import { albums } from "@/lib/data";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 export default function PlaylistPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
+
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState("");
+  const [newPlaylistDescription, setNewPlaylistDescription] = useState("");
 
   const playlistDocRef = useMemoFirebase(() => 
     user && firestore ? doc(firestore, 'users', user.uid, 'playlists', params.id) : null,
@@ -28,6 +39,13 @@ export default function PlaylistPage({ params }: { params: { id: string } }) {
 
   // Fallback to local album data if playlist is not found or loading
   const albumData = albums.find((a) => a.id === params.id);
+
+  useEffect(() => {
+    if (playlistData) {
+      setNewPlaylistName(playlistData.name);
+      setNewPlaylistDescription(playlistData.description || "");
+    }
+  }, [playlistData]);
 
   let content: Playlist | Album | undefined;
   let isPlaylist = false;
@@ -44,6 +62,35 @@ export default function PlaylistPage({ params }: { params: { id: string } }) {
       content = albumData;
       isPlaylist = false;
   }
+  
+  const handleDeletePlaylist = async () => {
+    if (!playlistDocRef) return;
+    try {
+      await deleteDoc(playlistDocRef);
+      toast({ title: "Playlist deleted" });
+      router.push('/library');
+    } catch (error) {
+      console.error("Error deleting playlist:", error);
+      toast({ variant: 'destructive', title: "Error", description: "Could not delete playlist." });
+    }
+  };
+
+  const handleRenamePlaylist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!playlistDocRef || !newPlaylistName) return;
+    try {
+      await updateDoc(playlistDocRef, {
+        name: newPlaylistName,
+        description: newPlaylistDescription,
+      });
+      toast({ title: "Playlist updated" });
+      setIsRenameDialogOpen(false);
+    } catch (error) {
+      console.error("Error renaming playlist:", error);
+      toast({ variant: 'destructive', title: "Error", description: "Could not update playlist." });
+    }
+  };
+
 
   // Handle loading state
   if (isPlaylistLoading) {
@@ -91,6 +138,7 @@ export default function PlaylistPage({ params }: { params: { id: string } }) {
   const totalMinutes = Math.floor(totalDuration / 60);
 
   return (
+    <>
     <div className="space-y-6 pb-8">
       <Button variant="ghost" onClick={() => router.back()} className="mb-4">
         <ChevronLeft className="mr-2 h-4 w-4" />
@@ -108,7 +156,44 @@ export default function PlaylistPage({ params }: { params: { id: string } }) {
         />
         <div className="space-y-2 text-center sm:text-left">
           <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{isPlaylist ? "Playlist" : "Album"}</h2>
-          <h1 className="text-4xl md:text-6xl font-extrabold tracking-tighter">{name}</h1>
+          <div className="flex items-center gap-3 justify-center sm:justify-start">
+            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tighter">{name}</h1>
+            {isPlaylist && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-10 w-10 mt-2">
+                    <MoreHorizontal />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onSelect={() => setIsRenameDialogOpen(true)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Rename
+                  </DropdownMenuItem>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                        <Trash2 className="mr-2 h-4 w-4 text-red-500" />
+                        <span className="text-red-500">Delete</span>
+                      </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete the playlist '{name}'.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeletePlaylist} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
           <p className="text-muted-foreground">{description}</p>
           <p className="text-sm text-muted-foreground">
             {songs.length} songs, about {totalMinutes} min
@@ -124,5 +209,47 @@ export default function PlaylistPage({ params }: { params: { id: string } }) {
       </div>
       <PlaylistContent songs={songs} />
     </div>
+    
+    <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Rename Playlist</DialogTitle>
+          <DialogDescription>
+            Give your playlist a new name and description.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleRenamePlaylist}>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="playlist-name">Name</Label>
+              <Input
+                id="playlist-name"
+                value={newPlaylistName}
+                onChange={(e) => setNewPlaylistName(e.target.value)}
+                placeholder="My Awesome Playlist"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="playlist-description">Description</Label>
+              <Input
+                id="playlist-description"
+                value={newPlaylistDescription}
+                onChange={(e) => setNewPlaylistDescription(e.target.value)}
+                placeholder="A short description..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="ghost">Cancel</Button>
+            </DialogClose>
+            <Button type="submit">Save</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
+
+    

@@ -90,8 +90,7 @@
           "description": "The streaming service the track is from (e.g., YouTube Music)."
         },
         "streamingServiceId": {
-          "type": "string",
-          "description": "The track's ID on the streaming service."
+          "type.string": "The track's ID on the streaming service."
         },
         "imageUrl": {
           "type": "string",
@@ -112,7 +111,8 @@
   "auth": {
     "providers": [
       "password",
-      "anonymous"
+      "anonymous",
+      "google.com"
     ]
   },
   "firestore": {

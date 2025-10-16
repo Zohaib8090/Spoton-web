@@ -15,7 +15,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { errorEmitter, FirestorePermissionError } from '@/firebase';
 import { PlaylistContent } from '@/components/playlist-content';
 import type { Song } from '@/lib/types';
-import jsmediatags from 'jsmediatags';
+import type { jsmediatags as jsmediatagsType } from 'jsmediatags/types';
 
 export default function LibraryPage() {
   const { user, isUserLoading } = useUser();
@@ -24,6 +24,13 @@ export default function LibraryPage() {
   const { toast } = useToast();
   const [localSongs, setLocalSongs] = useState<Song[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const jsmediatagsRef = useRef<typeof jsmediatagsType | null>(null);
+
+  useEffect(() => {
+    import('jsmediatags').then(mod => {
+      jsmediatagsRef.current = mod.default;
+    });
+  }, []);
   
   const playlistsQuery = useMemoFirebase(() => 
     user && firestore ? collection(firestore, 'users', user.uid, 'playlists') : null,
@@ -72,7 +79,8 @@ export default function LibraryPage() {
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files) return;
+    if (!files || !jsmediatagsRef.current) return;
+    const jsmediatags = jsmediatagsRef.current;
 
     const newSongsPromises = Array.from(files)
       .filter(file => file.type.startsWith('audio/') || file.type.startsWith('video/'))

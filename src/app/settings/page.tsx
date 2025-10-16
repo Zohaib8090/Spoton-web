@@ -3,6 +3,7 @@
 import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { useTheme } from "next-themes"
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -11,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 export default function SettingsPage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const { theme, setTheme } = useTheme()
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -80,7 +82,11 @@ export default function SettingsPage() {
                 Enjoy the app in a darker theme.
               </span>
             </Label>
-            <Switch id="dark-mode" checked disabled />
+            <Switch
+              id="dark-mode"
+              checked={theme === 'dark'}
+              onCheckedChange={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            />
           </div>
         </CardContent>
       </Card>

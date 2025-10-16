@@ -79,7 +79,7 @@ export function Player() {
   };
 
   const handleTouchEnd = () => {
-    if (touchDeltaY > 50) { // Threshold to close
+    if (touchDeltaY > 20) { // Threshold to close
       closePlayer();
     }
     // Reset positions

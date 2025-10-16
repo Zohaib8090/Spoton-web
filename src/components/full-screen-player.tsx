@@ -106,8 +106,8 @@ export function FullScreenPlayer() {
                 />
 
                 <div className="text-center">
-                    <h2 className="text-2xl font-bold tracking-tight">{currentSong.title}</h2>
-                    <p className="text-base text-muted-foreground">{currentSong.artist}</p>
+                    <h2 className="text-lg font-bold tracking-tight">{currentSong.title}</h2>
+                    <p className="text-sm text-muted-foreground">{currentSong.artist}</p>
                 </div>
             </div>
 

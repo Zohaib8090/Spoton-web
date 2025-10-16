@@ -91,6 +91,21 @@
         "username"
       ]
     },
+    "PinnedItem": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "PinnedItem",
+        "type": "object",
+        "description": "Represents a song, album, or playlist pinned by a user.",
+        "properties": {
+            "itemId": { "type": "string", "description": "The ID of the pinned item (song, playlist, or album)." },
+            "type": { "type": "string", "enum": ["song", "playlist", "album"] },
+            "name": { "type": "string" },
+            "artist": { "type": "string", "description": "Artist or description of the item." },
+            "albumArt": { "type": "string", "format": "uri" },
+            "pinnedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["itemId", "type", "name", "albumArt", "pinnedAt"]
+    },
     "Playlist": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Playlist",
@@ -222,6 +237,18 @@
         }
       },
       {
+        "path": "/users/{userId}/pins/{pinId}",
+        "definition": {
+            "entityName": "PinnedItem",
+            "schema": { "$ref": "#/backend/entities/PinnedItem" },
+            "description": "Stores user's pinned items (songs, albums, playlists). Limited to 9 per user.",
+            "params": [
+                { "name": "userId", "description": "The unique identifier of the user." },
+                { "name": "pinId", "description": "The unique identifier of the pin." }
+            ]
+        }
+      },
+      {
         "path": "/tracks/{trackId}",
         "definition": {
           "entityName": "Track",
@@ -241,5 +268,3 @@
     "reasoning": "The Firestore structure is designed to manage users, playlists, and tracks, with a focus on scalability and security. User data is stored in a dedicated collection, while playlists are stored within each user's document using a subcollection. Tracks are stored in a global collection, since Tracks are not owned by users.\n\nThis design prioritizes **Authorization Independence**. Specifically, there is no `get()` call in security rules.\n\nThe design supports the required QAPs:\n\n*   **Secure Lists:**  Path-based ownership (`/users/{userId}/playlists/{playlistId}`) enables secure list operations for playlists, as rules can easily filter based on `request.auth.uid == userId`.\n\n*   **DBAC:**  Roles are derived from `request.auth.uid` and path-based ownership, precluding the need for custom claims.\n"
   }
 }
-
-    

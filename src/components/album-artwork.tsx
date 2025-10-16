@@ -1,8 +1,9 @@
+
 "use client"
 
 import Image from "next/image"
 import Link from "next/link"
-import { Play, Pin } from "lucide-react"
+import { Play } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { usePlayer } from "@/context/player-context"
@@ -35,6 +36,7 @@ export function AlbumArtwork({ album, isPlaylist = false, className, ...props }:
 
   const handlePlay = (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if(album.songs && album.songs.length > 0) {
         playSong(album.songs[0], album.songs);
     }
@@ -44,8 +46,7 @@ export function AlbumArtwork({ album, isPlaylist = false, className, ...props }:
 
   return (
     <div className={cn("space-y-3", className)} {...props}>
-      <div className="overflow-hidden rounded-md relative group">
-        <Link href={href}>
+      <Link href={href} className="overflow-hidden rounded-md relative group block">
           <Image
             src={album.albumArt}
             alt={album.name}
@@ -54,7 +55,6 @@ export function AlbumArtwork({ album, isPlaylist = false, className, ...props }:
             className="h-auto w-auto object-cover aspect-square transition-all hover:scale-105"
             data-ai-hint="album cover"
           />
-        </Link>
         <div className="absolute bottom-2 right-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0">
             {user && (
                  <PinButton
@@ -79,7 +79,7 @@ export function AlbumArtwork({ album, isPlaylist = false, className, ...props }:
                 <Play className="h-5 w-5 text-primary-foreground fill-primary-foreground" />
             </button>
         </div>
-      </div>
+      </Link>
       <div className="space-y-1 text-sm">
         <Link href={href}>
           <h3 className="font-medium leading-none truncate hover:underline">{album.name}</h3>

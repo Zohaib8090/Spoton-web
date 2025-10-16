@@ -298,7 +298,9 @@ export function FullScreenPlayer() {
                                 </Button>
                             </>
                         )}
-                        <Button variant="ghost" size="icon" onClick={toggleQueue} className="text-muted-foreground hover:text-foreground"><Mic2 size={18}/></Button>
+                        <Button variant="ghost" size="icon" onClick={toggleQueue} className="text-muted-foreground hover:text-foreground" aria-label="Open lyrics/comments">
+                            <Mic2 size={18}/>
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={toggleQueue} className="text-muted-foreground hover:text-foreground"><ListMusic size={18}/></Button>
                     </div>
                 </div>

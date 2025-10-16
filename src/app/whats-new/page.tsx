@@ -21,17 +21,48 @@ export default function WhatsNewPage() {
   }, [user, isUserLoading, router]);
 
   const sendUpdateNotification = (title: string, body: string) => {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification(title, {
-        body: body,
-        icon: '/spoton-logo.svg',
-      });
+    if (!('Notification' in window)) {
+        toast({
+            variant: "destructive",
+            title: "Notifications not supported",
+            description: "This browser does not support desktop notifications."
+        });
+        return;
+    }
+
+    if (Notification.permission === 'granted') {
+      // This is a workaround for the "Illegal constructor" error.
+      // By wrapping it in a timeout, we move the execution to a different context,
+      // which browsers are often more lenient with for direct Notification construction.
+      setTimeout(() => {
+        new Notification(title, {
+          body: body,
+          icon: '/spoton-logo.svg',
+        });
+      }, 0);
+    } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+                 setTimeout(() => {
+                    new Notification(title, {
+                        body: body,
+                        icon: '/spoton-logo.svg',
+                    });
+                }, 0);
+            } else {
+                 toast({
+                    variant: "destructive",
+                    title: "Notifications not enabled",
+                    description: "You have denied notification permissions."
+                });
+            }
+        });
     } else {
         toast({
             variant: "destructive",
             title: "Notifications not enabled",
-            description: "Please enable notifications in the settings page to receive updates."
-        })
+            description: "Please enable notifications in your browser settings to receive updates."
+        });
     }
   };
 

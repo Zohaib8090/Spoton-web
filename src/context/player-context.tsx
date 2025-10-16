@@ -196,7 +196,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (listeningControls.monoAudio) {
       pannerNodeRef.current.pan.value = 0; // Center pan for mono
     } else {
-      pannerNodeRef.current.pan.value = listeningControls.balance;
+      // Ensure balance is a finite number, default to 0
+      pannerNodeRef.current.pan.value = typeof listeningControls.balance === 'number' && isFinite(listeningControls.balance) ? listeningControls.balance : 0;
     }
     lastNode.connect(pannerNodeRef.current);
     lastNode = pannerNodeRef.current;
@@ -544,15 +545,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   
   const closePlayer = useCallback(() => {
-    if (audioElement) audioElement.pause();
-    if (youtubePlayer) youtubePlayer.stopVideo();
-    if (currentSong?.audioSrc && currentSong.audioSrc.startsWith('blob:')) {
-        URL.revokeObjectURL(currentSong.audioSrc);
+    if (audioElement) {
+        audioElement.pause();
+        if (audioElement.src.startsWith('blob:')) {
+            URL.revokeObjectURL(audioElement.src);
+        }
+        audioElement.src = '';
     }
+    if (youtubePlayer) youtubePlayer.stopVideo();
+    
     setCurrentSong(null);
     setIsPlaying(false);
     setIsFullScreenPlayerOpen(false);
-  }, [audioElement, youtubePlayer, currentSong]);
+  }, [audioElement, youtubePlayer]);
 
   const toggleFullScreenPlayer = useCallback(() => {
     if (currentSong) {

@@ -13,7 +13,10 @@ import {
   ListMusic,
   Laptop2,
   Volume2,
-  ChevronDown
+  ChevronDown,
+  Shuffle,
+  Repeat,
+  Repeat1
 } from "lucide-react";
 import { usePlayer } from "@/context/player-context";
 import { Slider } from "@/components/ui/slider";
@@ -30,7 +33,11 @@ export function FullScreenPlayer() {
     playPrev,
     audioElement,
     isFullScreenPlayerOpen,
-    toggleFullScreenPlayer
+    toggleFullScreenPlayer,
+    shuffle,
+    toggleShuffle,
+    loop,
+    toggleLoop,
   } = usePlayer();
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState("0:00");
@@ -106,8 +113,8 @@ export function FullScreenPlayer() {
                 />
 
                 <div className="text-center">
-                    <h2 className="text-lg font-bold tracking-tight">{currentSong.title}</h2>
-                    <p className="text-sm text-muted-foreground">{currentSong.artist}</p>
+                    <h2 className="text-xl font-bold tracking-tight">{currentSong.title}</h2>
+                    <p className="text-base text-muted-foreground">{currentSong.artist}</p>
                 </div>
             </div>
 
@@ -127,7 +134,16 @@ export function FullScreenPlayer() {
                     </div>
                 </div>
 
-                <div className="flex items-center justify-center gap-6">
+                <div className="flex items-center justify-center gap-4">
+                     <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={toggleShuffle} 
+                        className={cn("text-muted-foreground h-14 w-14", shuffle && "text-primary")}
+                        aria-label="Toggle shuffle"
+                    >
+                        <Shuffle size={20} />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={playPrev} disabled={!currentSong} className="text-foreground h-14 w-14">
                         <SkipBack size={32} className="fill-current" />
                     </Button>
@@ -145,6 +161,15 @@ export function FullScreenPlayer() {
                     </Button>
                     <Button variant="ghost" size="icon" onClick={playNext} disabled={!currentSong} className="text-foreground h-14 w-14">
                         <SkipForward size={32} className="fill-current" />
+                    </Button>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={toggleLoop} 
+                        className={cn("text-muted-foreground h-14 w-14", loop !== 'none' && "text-primary")}
+                        aria-label="Toggle loop"
+                    >
+                        {loop === 'song' ? <Repeat1 size={20} /> : <Repeat size={20} />}
                     </Button>
                 </div>
 

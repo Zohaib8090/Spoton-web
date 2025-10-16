@@ -88,6 +88,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     audio: { wifi: 'automatic', cellular: 'standard' },
     video: { wifi: 'standard', cellular: 'standard' },
   };
+  
+  const volumeNormalization = userData?.settings?.listeningControls?.volumeNormalization ?? true;
+
 
   const { toast } = useToast();
 
@@ -228,6 +231,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       youtubePlayer.setPlaybackQuality(quality);
     }
   }, [playbackQualitySettings, youtubePlayer, showVideo, connectionType]);
+  
+  useEffect(() => {
+    if (volumeNormalization) {
+        if (audioElement) audioElement.volume = 0.8;
+        if (youtubePlayer && youtubePlayer.setVolume) youtubePlayer.setVolume(80);
+    } else {
+        if (audioElement) audioElement.volume = 1;
+        if (youtubePlayer && youtubePlayer.setVolume) youtubePlayer.setVolume(100);
+    }
+  }, [volumeNormalization, audioElement, youtubePlayer, currentSong]);
+
 
   useEffect(() => {
     if (currentSong?.isFromYouTube) {
@@ -425,7 +439,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     showVideo,
     toggleShowVideo,
     setYoutubePlayer,
-    setCurrentTime,
+setCurrentTime,
     handleCreatePlaylist,
   };
 
@@ -458,5 +472,7 @@ export function usePlayer(): PlayerContextType {
   }
   return context;
 }
+
+    
 
     

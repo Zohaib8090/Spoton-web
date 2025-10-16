@@ -16,13 +16,15 @@ import {
   Shuffle,
   Repeat,
   Repeat1,
-  Youtube
+  Youtube,
+  Share,
 } from "lucide-react";
 import { usePlayer } from "@/context/player-context";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 export function FullScreenPlayer() {
   const {
@@ -42,12 +44,14 @@ export function FullScreenPlayer() {
     toggleQueue,
     showVideo,
     toggleShowVideo,
-    setYoutubePlayer
+    setYoutubePlayer,
+    setCurrentTime: setPlayerCurrentTime,
   } = usePlayer();
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState("0:00");
   const [currentTime, setCurrentTime] = useState("0:00");
   const progressUpdateRef = useRef<number>();
+  const { toast } = useToast();
 
   const formatTime = (time: number) => {
     if (isNaN(time)) return "0:00";
@@ -57,19 +61,28 @@ export function FullScreenPlayer() {
   };
 
   const updateProgress = useCallback(() => {
+    let newProgress = 0;
+    let newCurrentTime = 0;
+    let newDuration = 0;
+
     if (currentSong?.isFromYouTube && youtubePlayer?.getDuration) {
-      const ytCurrentTime = youtubePlayer.getCurrentTime();
-      const ytDuration = youtubePlayer.getDuration();
-      if (ytDuration > 0) {
-        setProgress((ytCurrentTime / ytDuration) * 100);
-        setCurrentTime(formatTime(ytCurrentTime));
-        setDuration(formatTime(ytDuration));
+      newCurrentTime = youtubePlayer.getCurrentTime();
+      newDuration = youtubePlayer.getDuration();
+      if (newDuration > 0) {
+        newProgress = (newCurrentTime / newDuration) * 100;
       }
     } else if (audioElement?.duration) {
-      setProgress((audioElement.currentTime / audioElement.duration) * 100);
-      setCurrentTime(formatTime(audioElement.currentTime));
-      setDuration(formatTime(audioElement.duration));
+      newCurrentTime = audioElement.currentTime;
+      newDuration = audioElement.duration;
+      newProgress = (newCurrentTime / newDuration) * 100;
     }
+
+    setProgress(newProgress);
+    setCurrentTime(formatTime(newCurrentTime));
+    if (newDuration > 0) {
+      setDuration(formatTime(newDuration));
+    }
+
     if (isFullScreenPlayerOpen) {
       progressUpdateRef.current = requestAnimationFrame(updateProgress);
     }
@@ -97,13 +110,15 @@ export function FullScreenPlayer() {
 
   const handleProgressChange = (value: number[]) => {
     const newProgress = value[0];
+    let newTime = 0;
     if (currentSong?.isFromYouTube && youtubePlayer) {
-      const newTime = (newProgress / 100) * youtubePlayer.getDuration();
+      newTime = (newProgress / 100) * youtubePlayer.getDuration();
       youtubePlayer.seekTo(newTime, true);
     } else if (audioElement) {
-      const newTime = (newProgress / 100) * audioElement.duration;
+      newTime = (newProgress / 100) * audioElement.duration;
       audioElement.currentTime = newTime;
     }
+    setPlayerCurrentTime(newTime);
     setProgress(newProgress);
   };
   
@@ -116,6 +131,45 @@ export function FullScreenPlayer() {
   const onPlayerEnd = () => {
     playNext();
   };
+
+  const handleShare = async () => {
+    if (!currentSong || !currentSong.isFromYouTube) return;
+
+    const videoUrl = `https://www.youtube.com/watch?v=${currentSong.id}`;
+    const shareData = {
+      title: currentSong.title,
+      text: `Check out ${currentSong.title} by ${currentSong.artist}`,
+      url: videoUrl,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(videoUrl);
+        toast({
+          title: "Link Copied!",
+          description: "The video link has been copied to your clipboard.",
+        });
+      }
+    } catch (error) {
+      console.error("Error sharing:", error);
+      try {
+        await navigator.clipboard.writeText(videoUrl);
+        toast({
+          title: "Link Copied!",
+          description: "The video link has been copied to your clipboard.",
+        });
+      } catch (copyError) {
+        toast({
+          variant: "destructive",
+          title: "Share Failed",
+          description: "Could not share or copy the link.",
+        });
+      }
+    }
+  };
+
 
   if (!currentSong) return null;
 
@@ -140,7 +194,8 @@ export function FullScreenPlayer() {
                                 height: '100%',
                                 width: '100%',
                                 playerVars: {
-                                autoplay: 1,
+                                  autoplay: isPlaying ? 1 : 0,
+                                  start: audioElement?.currentTime || 0,
                                 },
                             }}
                             className="w-full h-full rounded-lg shadow-2xl overflow-hidden"
@@ -223,14 +278,25 @@ export function FullScreenPlayer() {
                     <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><Laptop2 size={18}/></Button>
                     <div className="flex items-center gap-2">
                         {currentSong.isFromYouTube && (
-                            <Button 
-                                variant="ghost" 
-                                size="icon"
-                                onClick={toggleShowVideo}
-                                className={cn("text-muted-foreground hover:text-foreground", showVideo && "text-primary")}
-                            >
-                                <Youtube size={18}/>
-                            </Button>
+                            <>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={handleShare}
+                                    className="text-muted-foreground hover:text-foreground"
+                                    aria-label="Share video"
+                                >
+                                    <Share size={18} />
+                                </Button>
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon"
+                                    onClick={toggleShowVideo}
+                                    className={cn("text-muted-foreground hover:text-foreground", showVideo && "text-primary")}
+                                >
+                                    <Youtube size={18}/>
+                                </Button>
+                            </>
                         )}
                         <Button variant="ghost" size="icon" onClick={toggleQueue} className="text-muted-foreground hover:text-foreground"><Mic2 size={18}/></Button>
                         <Button variant="ghost" size="icon" onClick={toggleQueue} className="text-muted-foreground hover:text-foreground"><ListMusic size={18}/></Button>

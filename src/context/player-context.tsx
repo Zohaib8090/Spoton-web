@@ -36,6 +36,7 @@ interface PlayerContextType {
   setIsLyricsLoading: Dispatch<SetStateAction<boolean>>;
   setPlaybackQuality: Dispatch<SetStateAction<PlaybackQuality>>;
   setYoutubePlayer: Dispatch<SetStateAction<any | null>>;
+  setCurrentTime: Dispatch<SetStateAction<number>>;
   toggleShowVideo: () => void;
   toggleFullScreenPlayer: () => void;
   toggleQueue: () => void;
@@ -66,6 +67,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [isLyricsLoading, setIsLyricsLoading] = useState(false);
   const [playbackQuality, setPlaybackQuality] = useState<PlaybackQuality>('auto');
   const [showVideo, setShowVideo] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
 
   const { toast } = useToast();
 
@@ -185,7 +187,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (currentSong?.isFromYouTube) {
         if (audioElement) audioElement.pause();
-        if (youtubePlayer) {
+        if (youtubePlayer && youtubePlayer.playVideo) {
             if (isPlaying) {
                 youtubePlayer.playVideo();
             } else {
@@ -193,7 +195,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             }
         }
     } else {
-        if (youtubePlayer) youtubePlayer.stopVideo();
+        if (youtubePlayer && youtubePlayer.stopVideo) youtubePlayer.stopVideo();
         if (audioElement && currentSong) {
             if (audioElement.src !== currentSong.audioSrc) {
                 if (audioElement.src.startsWith('blob:')) {
@@ -255,20 +257,18 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const toggleShuffle = useCallback(() => {
-    setShuffle(prev => {
-        const newShuffleState = !prev;
-        if (newShuffleState) {
-            setShuffledPlaylist([...playlist].sort(() => Math.random() - 0.5));
-        }
-        return newShuffleState;
-    });
-    // Toast is now triggered in a separate effect
-  }, [playlist]);
+    const newShuffleState = !shuffle;
+    setShuffle(newShuffleState);
+    if (newShuffleState) {
+        setShuffledPlaylist([...playlist].sort(() => Math.random() - 0.5));
+    }
+  }, [shuffle, playlist]);
 
   useEffect(() => {
+    if (playlist.length === 0) return;
     if (shuffle) {
       toast({ description: "Shuffle enabled" });
-    } else if (shuffle === false && playlist.length > 0) { // Check playlist to avoid toast on initial load
+    } else {
       toast({ description: "Shuffle disabled" });
     }
   }, [shuffle, playlist.length, toast]);
@@ -279,31 +279,38 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         if (currentLoop === 'playlist') return 'song';
         return 'none';
     });
-     // Toast is now triggered in a separate effect
   }, []);
 
   useEffect(() => {
+    if (playlist.length === 0) return;
     let description = "";
     if (loop === 'playlist') {
         description = "Looping playlist";
     } else if (loop === 'song') {
         description = "Looping song";
     } else {
-        // Only show "loop disabled" if it was previously enabled.
-        if (playlist.length > 0) description = "Looping disabled";
+        description = "Looping disabled";
     }
-    if (description) {
-      toast({ description });
-    }
+    toast({ description });
   }, [loop, playlist.length, toast]);
 
 
   const toggleShowVideo = useCallback(() => {
+      let time = 0;
+      if (currentSong?.isFromYouTube && youtubePlayer) {
+          time = youtubePlayer.getCurrentTime();
+      } else if (audioElement) {
+          time = audioElement.currentTime;
+      }
+      setCurrentTime(time);
       setShowVideo(prev => !prev);
-  }, []);
+  }, [currentSong, youtubePlayer, audioElement]);
   
   const onPlayerReady = (event: any) => {
     setYoutubePlayer(event.target);
+    if (showVideo && currentTime > 0) {
+      event.target.seekTo(currentTime, true);
+    }
   };
   
   const onPlayerStateChange = (event: any) => {
@@ -342,6 +349,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     showVideo,
     toggleShowVideo,
     setYoutubePlayer,
+    setCurrentTime,
   };
 
   return (
@@ -357,6 +365,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             width: '0',
             playerVars: {
               autoplay: 1,
+              start: currentTime,
             },
           }}
         />

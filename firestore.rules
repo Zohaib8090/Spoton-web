@@ -2,107 +2,108 @@
  * @fileoverview Firestore Security Rules for HarmonyStream.
  *
  * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for user profiles, playlists, and pinned items,
- * and allows public read access to track metadata.  All write operations require a valid,
- * authenticated user.  Data validation is minimized to allow for rapid prototyping.
+ * This ruleset enforces a strict user-ownership model for user profiles and playlists.
+ * Tracks are considered public metadata and are read-only.
  *
  * Data Structure:
- * - /users/{userId}: Stores user profile information, accessible only to the user.
- * - /users/{userId}/playlists/{playlistId}: Stores user-created playlists, accessible only to the user.
- * - /users/{userId}/pins/{pinId}: Stores user's pinned items, accessible only to the user.
- * - /tracks/{trackId}: Stores track metadata, publicly readable but not writable by clients.
+ * - /users/{userId}: Stores user profile data.
+ * - /users/{userId}/playlists/{playlistId}: Stores playlists created by each user.
+ * - /tracks/{trackId}: Stores track metadata.
  *
  * Key Security Decisions:
- * - User listing is disabled for privacy.
- * - Track data is publicly readable to facilitate discovery, but write access is not granted by these rules.
- * - Rules are designed to avoid `get()` calls for performance and cost efficiency by denormalizing authorization data.
+ * - Users can only read and write their own profile data and playlists.
+ * - Tracks are publicly readable.
+ * - Listing of users is disallowed.
+ * - Write operations must be authenticated.
+ *
+ * Denormalization for Authorization:
+ * The rules leverage path-based authorization, avoiding the need for `get()` calls.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Protects user profiles.  Users can only read/write their own profile.
+     * @description Controls access to the users collection. Users can only read and write their own profile data.
      * @path /users/{userId}
-     * @allow (create, update, delete) if the user's ID matches the document ID.
-     * @deny (create, update, delete) if the user's ID does not match the document ID.
+     * @allow (create, update, delete): Authenticated user can create, update, or delete their own user document.
+     * @allow (get): Authenticated user can get their own user document.
+     * @allow (list): Listing all users is disallowed.
+     * @deny (create): If the authenticated user's ID does not match the user ID in the path.
      * @principle Enforces document ownership for writes.
      */
     match /users/{userId} {
-      function isOwner(userId) {
-        return request.auth != null && request.auth.uid == userId;
-      }
-
       function isSignedIn() {
         return request.auth != null;
       }
-
-      allow get: if isOwner(userId);
-      allow list: if false; // User listing is not permitted.
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId) && resource != null;
+      allow delete: if isSignedIn() && isOwner(userId) && resource != null;
     }
 
     /**
-     * @description Protects playlists created by a user. Each user can only read/write their own playlists.
+     * @description Controls access to playlists within a user's document.  Users can only read and write their own playlists.
      * @path /users/{userId}/playlists/{playlistId}
-     * @allow (create, update, delete) if the user's ID matches the userId path.
-     * @deny (create, update, delete) if the user's ID does not match the userId path.
-     * @principle Enforces document ownership for writes, path-based access control.
+     * @allow (create, update, delete): Authenticated user can create, update, or delete their own playlist.
+     * @allow (get, list): Authenticated user can get or list their own playlists.
+     * @deny (create, update, delete): If the authenticated user's ID does not match the user ID in the path.
+     * @principle Restricts access to a user's own data tree.
      */
     match /users/{userId}/playlists/{playlistId} {
-        function isOwner(userId) {
-            return request.auth != null && request.auth.uid == userId;
-        }
-
-        function isSignedIn() {
-            return request.auth != null;
-        }
-
-        allow get: if isOwner(userId);
-        allow list: if false;
-        allow create: if isSignedIn() && request.auth.uid == userId;
-        allow update: if isOwner(userId);
-        allow delete: if isOwner(userId);
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if isSignedIn() && isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId) && resource != null;
+      allow delete: if isSignedIn() && isOwner(userId) && resource != null;
     }
 
-    /**
-     * @description Protects pinned items (songs, albums, playlists) for each user.
-     * @path /users/{userId}/pins/{pinId}
-     * @allow (create, update, delete) if the user's ID matches the userId path.
-     * @deny (create, update, delete) if the user's ID does not match the userId path.
-     * @principle Enforces document ownership for writes, path-based access control.
-     */
-     match /users/{userId}/pins/{pinId} {
-        function isOwner(userId) {
-            return request.auth != null && request.auth.uid == userId;
+        /**
+         * @description Manages access to pinned items for each user.
+         * @path /users/{userId}/pins/{pinId}
+         * @allow (create): Authenticated user can create a new pin.  MUST validate the pin limit (<=9).
+         * @allow (get, list): Authenticated user can get and list their own pins.
+         * @allow (update, delete): Authenticated user can update/delete their own pin.
+         * @deny (create, update, delete): If the authenticated user's ID does not match the user ID in the path.
+         * @principle Restricts access to a user's own pins.
+         */
+        match /users/{userId}/pins/{pinId} {
+            function isSignedIn() {
+                return request.auth != null;
+            }
+
+            function isOwner(userId) {
+                return request.auth.uid == userId;
+            }
+
+            allow get: if isSignedIn() && isOwner(userId);
+            allow list: if isSignedIn() && isOwner(userId);
+            allow create: if isSignedIn() && isOwner(userId);
+            allow update: if isSignedIn() && isOwner(userId) && resource != null;
+            allow delete: if isSignedIn() && isOwner(userId) && resource != null;
         }
 
-        function isSignedIn() {
-            return request.auth != null;
-        }
-
-        allow get: if isOwner(userId);
-        allow list: if false;
-        allow create: if isSignedIn() && request.auth.uid == userId;
-        allow update: if isOwner(userId);
-        allow delete: if isOwner(userId);
-    }
 
     /**
-     * @description Allows public read access to track metadata.
+     * @description Controls access to the tracks collection.  Tracks are publicly readable.
      * @path /tracks/{trackId}
-     * @allow get, list: if true;
-     * @deny create, update, delete: always.
-     * @principle Public read, owner-only writes (no owner, so writes are disabled).
+     * @allow (get, list): Anyone can get or list tracks.
+     * @deny (create, update, delete): No one can create, update, or delete tracks.
+     * @principle Tracks are read-only and available to everyone.
      */
     match /tracks/{trackId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      allow get, list: if true;
+      allow create, update, delete: if false;
     }
   }
 }

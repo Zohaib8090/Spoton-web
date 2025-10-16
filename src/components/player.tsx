@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import {
   Play,
@@ -27,44 +28,63 @@ export function Player() {
     playNext,
     playPrev,
     closePlayer,
+    audioElement,
   } = usePlayer();
   const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState("0:00");
+  const [currentTime, setCurrentTime] = useState("0:00");
+
   const [touchStartY, setTouchStartY] = useState(0);
   const [touchDeltaY, setTouchDeltaY] = useState(0);
   const playerRef = useRef<HTMLDivElement>(null);
+
+
+  const formatTime = (time: number) => {
+    if (isNaN(time)) return "0:00";
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  };
+
+  const onTimeUpdate = useCallback(() => {
+    if (audioElement) {
+      setProgress((audioElement.currentTime / audioElement.duration) * 100);
+      setCurrentTime(formatTime(audioElement.currentTime));
+    }
+  }, [audioElement]);
+
+  const onLoadedData = useCallback(() => {
+    if (audioElement) {
+        setDuration(formatTime(audioElement.duration));
+    }
+  }, [audioElement]);
+
+  useEffect(() => {
+    if (audioElement) {
+      audioElement.addEventListener("timeupdate", onTimeUpdate);
+      audioElement.addEventListener("loadedmetadata", onLoadedData);
+      audioElement.addEventListener("durationchange", onLoadedData);
+      return () => {
+        audioElement.removeEventListener("timeupdate", onTimeUpdate);
+        audioElement.removeEventListener("loadedmetadata", onLoadedData);
+        audioElement.removeEventListener("durationchange", onLoadedData);
+      };
+    }
+  }, [audioElement, onTimeUpdate, onLoadedData]);
+
 
   useEffect(() => {
     setProgress(0);
     setTouchDeltaY(0);
   }, [currentSong]);
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isPlaying && currentSong) {
-      interval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            playNext();
-            return 0;
-          }
-          const durationParts = currentSong.duration.split(':').map(Number);
-          const totalSeconds = durationParts[0] * 60 + durationParts[1];
-          const increment = 100 / totalSeconds;
-          return prev + increment;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying, currentSong, playNext]);
 
-  const formatTime = (percentage: number) => {
-    if (!currentSong) return "0:00";
-    const durationParts = currentSong.duration.split(':').map(Number);
-    const totalSeconds = durationParts[0] * 60 + durationParts[1];
-    const currentSeconds = Math.floor((totalSeconds * percentage) / 100);
-    const minutes = Math.floor(currentSeconds / 60);
-    const seconds = currentSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  const handleProgressChange = (value: number[]) => {
+    if (audioElement) {
+      const newTime = (value[0] / 100) * audioElement.duration;
+      audioElement.currentTime = newTime;
+      setProgress(value[0]);
+    }
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -86,6 +106,8 @@ export function Player() {
     setTouchStartY(0);
     setTouchDeltaY(0);
   };
+
+  const displayDuration = currentSong?.duration === "N/A" ? duration : currentSong?.duration;
 
   return (
     <div
@@ -143,16 +165,16 @@ export function Player() {
             </Button>
           </div>
           <div className="w-full flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">{formatTime(progress)}</span>
+            <span className="text-xs text-muted-foreground">{currentTime}</span>
             <Slider
               value={[progress]}
-              onValueChange={(value) => setProgress(value[0])}
+              onValueChange={handleProgressChange}
               max={100}
               step={1}
               className={cn("w-full h-1 group", !currentSong && "opacity-50")}
               disabled={!currentSong}
             />
-            <span className="text-xs text-muted-foreground">{currentSong?.duration || "0:00"}</span>
+            <span className="text-xs text-muted-foreground">{displayDuration || "0:00"}</span>
           </div>
         </div>
 

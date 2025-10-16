@@ -1,23 +1,28 @@
+
 "use client";
 
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlbumArtwork } from '@/components/album-artwork';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { collection, addDoc, serverTimestamp }from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Music, FolderUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { errorEmitter, FirestorePermissionError } from '@/firebase';
+import { PlaylistContent } from '@/components/playlist-content';
+import type { Song } from '@/lib/types';
 
 export default function LibraryPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+  const [localSongs, setLocalSongs] = useState<Song[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const playlistsQuery = useMemoFirebase(() => 
     user && firestore ? collection(firestore, 'users', user.uid, 'playlists') : null,
@@ -64,6 +69,37 @@ export default function LibraryPage() {
       });
   };
 
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    const newSongs: Song[] = Array.from(files)
+      .filter(file => file.type.startsWith('audio/'))
+      .map((file, index) => {
+        const audioSrc = URL.createObjectURL(file);
+        return {
+          id: `local-${file.name}-${index}`,
+          title: file.name.replace(/\.[^/.]+$/, ""), // Remove file extension
+          artist: "Unknown Artist",
+          album: "Local Files",
+          albumId: "local",
+          albumArt: "https://picsum.photos/seed/local-default/400/400", // Generic image
+          duration: "N/A", // Can't easily get duration without more complex logic
+          audioSrc: audioSrc,
+        };
+      });
+
+    setLocalSongs(currentSongs => [...currentSongs, ...newSongs]);
+    toast({
+        title: `${newSongs.length} song(s) added`,
+        description: "These songs are available for this session only.",
+    })
+  };
+
+  const handleSelectFilesClick = () => {
+    fileInputRef.current?.click();
+  };
+
 
   if (isUserLoading || !user || playlistsLoading) {
     return (
@@ -95,6 +131,7 @@ export default function LibraryPage() {
           <TabsTrigger value="albums">Albums</TabsTrigger>
           <TabsTrigger value="artists">Artists</TabsTrigger>
           <TabsTrigger value="liked">Liked Songs</TabsTrigger>
+          <TabsTrigger value="local">Local Files</TabsTrigger>
         </TabsList>
 
         <TabsContent value="playlists">
@@ -118,6 +155,40 @@ export default function LibraryPage() {
                     <p>You haven&apos;t created any playlists yet.</p>
                 </div>
             )}
+        </TabsContent>
+        <TabsContent value="local">
+           <div className="space-y-4">
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                    multiple
+                    accept="audio/*"
+                    className="hidden"
+                />
+                {localSongs.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-12 flex flex-col items-center gap-4">
+                        <Music className="h-12 w-12" />
+                        <h3 className="text-lg font-semibold">Play from your device</h3>
+                        <p className="max-w-md">Select local audio files to play them in the app. These files are only available for your current session and won&apos;t be saved.</p>
+                        <Button onClick={handleSelectFilesClick}>
+                            <FolderUp className="mr-2 h-4 w-4" />
+                            Select Files
+                        </Button>
+                    </div>
+                ) : (
+                    <div>
+                        <div className="flex justify-between items-center mb-4">
+                             <h3 className="text-xl font-bold">Your Local Files ({localSongs.length})</h3>
+                             <Button onClick={handleSelectFilesClick} variant="outline">
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Add More Files
+                            </Button>
+                        </div>
+                        <PlaylistContent songs={localSongs} />
+                    </div>
+                )}
+           </div>
         </TabsContent>
         <TabsContent value="liked">
             <p className="text-muted-foreground">Liked songs will appear here. For now, this is just a placeholder.</p>

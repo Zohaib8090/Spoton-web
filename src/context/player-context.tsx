@@ -1,6 +1,7 @@
+
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import type { Song } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -14,6 +15,7 @@ interface PlayerContextType {
   playNext: () => void;
   playPrev: () => void;
   closePlayer: () => void;
+  audioElement: HTMLAudioElement | null;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -23,7 +25,43 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playlist, setPlaylist] = useState<Song[]>([]);
   const [listeningHistory, setListeningHistory] = useState<string[]>([]);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const audio = new Audio();
+    setAudioElement(audio);
+
+    const handleEnded = () => playNext();
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+      audio.removeEventListener('ended', handleEnded);
+      if (currentSong?.audioSrc.startsWith('blob:')) {
+        URL.revokeObjectURL(currentSong.audioSrc);
+      }
+      audio.pause();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (audioElement && currentSong) {
+      if (audioElement.src !== currentSong.audioSrc) {
+        // Clean up old blob URL if it exists
+        if (audioElement.src.startsWith('blob:')) {
+           URL.revokeObjectURL(audioElement.src);
+        }
+        audioElement.src = currentSong.audioSrc;
+      }
+      if (isPlaying) {
+        audioElement.play().catch(e => console.error("Playback failed", e));
+      } else {
+        audioElement.pause();
+      }
+    }
+  }, [currentSong, isPlaying, audioElement]);
+
 
   const playSong = useCallback((song: Song, newPlaylist: Song[] = []) => {
     setCurrentSong(song);
@@ -33,9 +71,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     } else {
       setPlaylist([song]);
     }
-    setListeningHistory(prev => [...new Set([`${song.title} - ${song.artist}`, ...prev])].slice(0, 20));
+    if (!song.audioSrc.startsWith('blob:')) {
+        setListeningHistory(prev => [...new Set([`${song.title} - ${song.artist}`, ...prev])].slice(0, 20));
+    }
     
-    // This is a placeholder since we aren't playing real audio
     toast({
       title: "Now Playing",
       description: `${song.title} by ${song.artist}`,
@@ -67,9 +106,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [currentSong, playlist, playSong]);
   
   const closePlayer = useCallback(() => {
+    if (audioElement) {
+        audioElement.pause();
+        if (currentSong?.audioSrc.startsWith('blob:')) {
+           URL.revokeObjectURL(currentSong.audioSrc);
+        }
+    }
     setCurrentSong(null);
     setIsPlaying(false);
-  }, []);
+  }, [audioElement, currentSong]);
 
   const value = {
     currentSong,
@@ -81,6 +126,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     playNext,
     playPrev,
     closePlayer,
+    audioElement,
   };
 
   return (

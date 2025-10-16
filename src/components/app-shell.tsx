@@ -17,9 +17,12 @@ import { Player } from "@/components/player";
 import { playlists } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { HarmonyStreamLogo } from "@/components/harmony-stream-logo";
+import { usePlayer } from "@/context/player-context";
+import { cn } from "@/lib/utils";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { currentSong } = usePlayer();
   
   const isActive = (path: string) => {
     if (path === '/') return pathname === '/';
@@ -87,11 +90,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <SidebarInset>
           <div className="flex flex-col h-full">
-            <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+            <main className={cn("flex-1 overflow-y-auto p-4 md:p-6 lg:p-8", {
+              "pb-28": currentSong,
+            })}>
               <div className="absolute top-0 left-0 w-full h-[250px] bg-gradient-to-b from-primary/40 to-background -z-10" />
               {children}
             </main>
-            <Player />
+            {currentSong && <Player />}
           </div>
         </SidebarInset>
       </div>

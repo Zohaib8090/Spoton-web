@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useAuth } from '@/firebase';
+import { useUser } from '@/firebase';
 import { updateProfile } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,18 +14,19 @@ import { User as UserIcon } from 'lucide-react';
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
-  const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [displayName, setDisplayName] = useState('');
+  const [photoURL, setPhotoURL] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
     }
-    if (user && user.displayName) {
-      setDisplayName(user.displayName);
+    if (user) {
+      setDisplayName(user.displayName || '');
+      setPhotoURL(user.photoURL || '');
     }
   }, [user, isUserLoading, router]);
 
@@ -35,11 +36,16 @@ export default function ProfilePage() {
 
     setIsUpdating(true);
     try {
-      await updateProfile(user, { displayName });
+      await updateProfile(user, { 
+        displayName: displayName || '',
+        photoURL: photoURL || '' 
+      });
       toast({
         title: 'Profile Updated',
-        description: 'Your display name has been updated.',
+        description: 'Your profile has been successfully updated.',
       });
+      // Force a reload of the user object to see changes
+      await user.reload();
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -84,7 +90,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <form onSubmit={handleUpdateProfile} className="space-y-4 max-w-md">
+      <form onSubmit={handleUpdateProfile} className="space-y-6 max-w-md">
         <div className="space-y-2">
           <Label htmlFor="displayName">Display Name</Label>
           <Input
@@ -92,6 +98,16 @@ export default function ProfilePage() {
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             placeholder="Enter your display name"
+            disabled={isUpdating}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="photoURL">Avatar URL</Label>
+          <Input
+            id="photoURL"
+            value={photoURL}
+            onChange={(e) => setPhotoURL(e.target.value)}
+            placeholder="https://example.com/avatar.png"
             disabled={isUpdating}
           />
         </div>

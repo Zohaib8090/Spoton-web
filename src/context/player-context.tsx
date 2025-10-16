@@ -87,6 +87,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const pannerNodeRef = useRef<StereoPannerNode | null>(null);
   const fadeIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const eqNodesRef = useRef<BiquadFilterNode[]>([]);
@@ -139,7 +140,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     return () => {
       audio.removeEventListener('ended', handleSongEnd);
-      // We don't pause or revoke the object URL here to allow background playback
     };
   }, [handleSongEnd]);
 
@@ -176,6 +176,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           filter.Q.value = 1.41;
           return filter;
         });
+      } else {
+         eqNodesRef.current.forEach((filter, i) => {
+             filter.gain.value = equaliserSettings[i];
+         });
       }
       eqNodesRef.current.forEach(filter => {
         lastNode.connect(filter);
@@ -185,12 +189,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     // Mono audio setup
     if (listeningControls.monoAudio) {
-      const splitter = audioContext.createChannelSplitter(2);
-      const merger = audioContext.createChannelMerger(1);
-      lastNode.connect(splitter);
-      splitter.connect(merger, 0, 0);
-      splitter.connect(merger, 1, 0);
-      lastNode = merger;
+      if (!pannerNodeRef.current) {
+        pannerNodeRef.current = audioContext.createStereoPanner();
+      }
+      pannerNodeRef.current.pan.value = 0; // Center pan for mono
+      lastNode.connect(pannerNodeRef.current);
+      lastNode = pannerNodeRef.current;
+    } else {
+        if (pannerNodeRef.current) {
+            pannerNodeRef.current.pan.value = 0; // Reset pan
+        }
     }
 
     lastNode.connect(audioContext.destination);
@@ -355,9 +363,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         }
         return; 
       }
-      playSong(activePlaylist[nextIndex], playlist);
+       if (trackTransitions.gaplessPlayback || trackTransitions.automix) {
+           playSong(activePlaylist[nextIndex], playlist);
+       } else {
+          setTimeout(() => playSong(activePlaylist[nextIndex], playlist), 1000);
+       }
     }
-  }, [currentSong, playlist, shuffledPlaylist, shuffle, loop, playSong, audioElement, youtubePlayer, listeningControls.autoPlay, listeningHistory, toast]);
+  }, [currentSong, playlist, shuffledPlaylist, shuffle, loop, playSong, audioElement, youtubePlayer, listeningControls.autoPlay, listeningHistory, toast, trackTransitions]);
 
   useEffect(() => {
     playNextRef.current = playNext;
@@ -452,10 +464,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
                 const currentIndex = activePlaylist.findIndex(s => s.id === currentSong.id);
                 const nextIndex = (currentIndex + 1) % activePlaylist.length;
                 if (currentIndex !== -1 && (nextIndex !== 0 || loop === 'playlist')) {
-                    if (trackTransitions.gaplessPlayback || trackTransitions.automix) {
-                        playNextRef.current();
-                        nextSongTriggeredRef.current = true;
-                    }
+                    playNextRef.current();
+                    nextSongTriggeredRef.current = true;
                 }
             }
         }
@@ -484,6 +494,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             }
 
             if (isPlaying) {
+                if (audioContextRef.current?.state === 'suspended') {
+                    audioContextRef.current.resume();
+                }
                 const playPromise = audioElement.play();
                 if (playPromise !== undefined) {
                     playPromise.catch(e => console.error("Playback failed", e));

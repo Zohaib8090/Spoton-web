@@ -77,6 +77,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [isLyricsLoading, setIsLyricsLoading] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const stereoPannerNodeRef = useRef<StereoPannerNode | null>(null);
 
   const { user } = useUser();
   const firestore = useFirestore();
@@ -90,8 +94,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     video: { wifi: 'standard', cellular: 'standard' },
   };
   
-  const volumeNormalization = userData?.settings?.listeningControls?.volumeNormalization ?? true;
-  const autoPlay = userData?.settings?.listeningControls?.autoPlay ?? true;
+  const listeningControls = userData?.settings?.listeningControls || {
+      volumeNormalization: true,
+      autoPlay: true,
+      monoAudio: false,
+  };
   const trackTransitions = userData?.settings?.trackTransitions || { automix: false, crossfade: 0 };
 
 
@@ -111,6 +118,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const audio = new Audio();
+    audio.crossOrigin = "anonymous";
     setAudioElement(audio);
     audio.addEventListener('ended', handleSongEnd);
 
@@ -122,6 +130,36 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       audio.pause();
     };
   }, [handleSongEnd]);
+
+  useEffect(() => {
+    if (!audioElement || typeof window === 'undefined') return;
+
+    if (listeningControls.monoAudio) {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      const audioContext = audioContextRef.current;
+      if (!audioSourceRef.current) {
+        audioSourceRef.current = audioContext.createMediaElementSource(audioElement);
+      }
+      if (!stereoPannerNodeRef.current) {
+         // A more robust way to create mono:
+        const splitter = audioContext.createChannelSplitter(2);
+        const merger = audioContext.createChannelMerger(1);
+        audioSourceRef.current.connect(splitter);
+        splitter.connect(merger, 0, 0);
+        splitter.connect(merger, 1, 0);
+        merger.connect(audioContext.destination);
+
+      }
+    } else {
+      // Disconnect panner if it exists, to return to stereo
+      if (audioSourceRef.current && stereoPannerNodeRef.current && audioContextRef.current) {
+        audioSourceRef.current.disconnect(stereoPannerNodeRef.current);
+        audioSourceRef.current.connect(audioContextRef.current.destination);
+      }
+    }
+  }, [listeningControls.monoAudio, audioElement]);
 
   useEffect(() => {
     const updateConnectionType = () => {
@@ -227,7 +265,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         if (loop === 'playlist') {
           nextIndex = 0;
           playSong(activePlaylist[nextIndex], playlist);
-        } else if (autoPlay) {
+        } else if (listeningControls.autoPlay) {
             // Autoplay logic
             try {
               const result = await generatePersonalizedRecommendations({ listeningHistory });
@@ -245,7 +283,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       }
       playSong(activePlaylist[nextIndex], playlist);
     }
-  }, [currentSong, playlist, shuffledPlaylist, shuffle, loop, playSong, audioElement, youtubePlayer, autoPlay, listeningHistory]);
+  }, [currentSong, playlist, shuffledPlaylist, shuffle, loop, playSong, audioElement, youtubePlayer, listeningControls.autoPlay, listeningHistory]);
 
   useEffect(() => {
     playNextRef.current = playNext;
@@ -275,14 +313,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [playbackQualitySettings, youtubePlayer, showVideo, connectionType]);
   
   useEffect(() => {
-    if (volumeNormalization) {
+    if (listeningControls.volumeNormalization) {
         if (audioElement) audioElement.volume = 0.8;
         if (youtubePlayer && youtubePlayer.setVolume) youtubePlayer.setVolume(80);
     } else {
         if (audioElement) audioElement.volume = 1;
         if (youtubePlayer && youtubePlayer.setVolume) youtubePlayer.setVolume(100);
     }
-  }, [volumeNormalization, audioElement, youtubePlayer, currentSong]);
+  }, [listeningControls.volumeNormalization, audioElement, youtubePlayer, currentSong]);
 
   const updateProgress = useCallback(() => {
     if (!audioElement || !currentSong) return;
@@ -292,7 +330,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
         if (timeLeft <= trackTransitions.crossfade) {
             const volume = timeLeft / trackTransitions.crossfade;
-            audioElement.volume = Math.max(0, volume * (volumeNormalization ? 0.8 : 1));
+            audioElement.volume = Math.max(0, volume * (listeningControls.volumeNormalization ? 0.8 : 1));
 
             if (!nextSongTriggeredRef.current) {
                 const activePlaylist = shuffle ? shuffledPlaylist : playlist;
@@ -305,7 +343,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             }
         }
     }
-  }, [audioElement, currentSong, trackTransitions, volumeNormalization, shuffle, shuffledPlaylist, playlist, loop]);
+  }, [audioElement, currentSong, trackTransitions, listeningControls.volumeNormalization, shuffle, shuffledPlaylist, playlist, loop]);
 
   useEffect(() => {
     if (currentSong?.isFromYouTube) {
@@ -512,7 +550,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     showVideo,
     toggleShowVideo,
     setYoutubePlayer,
-setCurrentTime,
+    setCurrentTime,
     handleCreatePlaylist,
   };
 

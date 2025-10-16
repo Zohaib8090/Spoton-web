@@ -1,3 +1,6 @@
+
+"use client";
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { AppShell } from '@/components/app-shell';
@@ -6,17 +9,24 @@ import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase';
 import { ThemeProvider } from '@/context/theme-provider';
 import { PlaybackQueue } from '@/components/playback-queue';
-
-export const metadata: Metadata = {
-  title: 'spoton',
-  description: 'Stream music from all your favorite services in one place.',
-};
+import { useState, useEffect } from 'react';
+import { IntroLoader } from '@/components/intro-loader';
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 3000); // Show intro for 3 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -26,6 +36,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
+        <IntroLoader loading={isLoading} />
         <FirebaseClientProvider>
           <ThemeProvider
             attribute="class"

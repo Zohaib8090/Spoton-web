@@ -115,10 +115,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         <Search size={24} />
                         <span className="text-xs font-medium">Search</span>
                     </Link>
-                    <Button variant="ghost" className="flex flex-col items-center gap-1 h-auto p-2 hover:text-foreground">
+                    <Link href="/library" className={cn("flex flex-col items-center gap-1 p-2 rounded-md transition-colors", isActive('/library') ? "text-foreground" : "hover:text-foreground")}>
                       <Library size={24} />
                       <span className="text-xs font-medium">Library</span>
-                    </Button>
+                    </Link>
                     <Button variant="ghost" className="flex flex-col items-center gap-1 h-auto p-2 hover:text-foreground">
                       <Plus size={24} />
                       <span className="text-xs font-medium">Create Playlist</span>

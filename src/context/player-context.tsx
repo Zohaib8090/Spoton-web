@@ -92,6 +92,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   
   const volumeNormalization = userData?.settings?.listeningControls?.volumeNormalization ?? true;
   const autoPlay = userData?.settings?.listeningControls?.autoPlay ?? true;
+  const trackTransitions = userData?.settings?.trackTransitions || { automix: false, crossfade: 0 };
 
 
   const { toast } = useToast();
@@ -102,6 +103,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [currentSong]);
 
   const playNextRef = useRef<() => void>(() => {});
+  const nextSongTriggeredRef = useRef(false);
 
   const handleSongEnd = useCallback(() => {
     playNextRef.current();
@@ -174,6 +176,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       title: "Now Playing",
       description: `${song.title} by ${song.artist}`,
     });
+    
+    nextSongTriggeredRef.current = false;
+
   }, [toast, shuffle, playlist, audioElement, youtubePlayer, currentSong]);
 
   const findAndPlaySong = async (query: string) => {
@@ -279,6 +284,28 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, [volumeNormalization, audioElement, youtubePlayer, currentSong]);
 
+  const updateProgress = useCallback(() => {
+    if (!audioElement || !currentSong) return;
+
+    if (trackTransitions.automix && trackTransitions.crossfade > 0 && !currentSong.isFromYouTube) {
+        const timeLeft = audioElement.duration - audioElement.currentTime;
+
+        if (timeLeft <= trackTransitions.crossfade) {
+            const volume = timeLeft / trackTransitions.crossfade;
+            audioElement.volume = Math.max(0, volume * (volumeNormalization ? 0.8 : 1));
+
+            if (!nextSongTriggeredRef.current) {
+                const activePlaylist = shuffle ? shuffledPlaylist : playlist;
+                const currentIndex = activePlaylist.findIndex(s => s.id === currentSong.id);
+                const nextIndex = (currentIndex + 1) % activePlaylist.length;
+                if (currentIndex !== -1 && (nextIndex !== 0 || loop === 'playlist')) {
+                    playNextRef.current();
+                    nextSongTriggeredRef.current = true;
+                }
+            }
+        }
+    }
+  }, [audioElement, currentSong, trackTransitions, volumeNormalization, shuffle, shuffledPlaylist, playlist, loop]);
 
   useEffect(() => {
     if (currentSong?.isFromYouTube) {
@@ -310,6 +337,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         }
     }
   }, [currentSong, isPlaying, audioElement, youtubePlayer]);
+
+  useEffect(() => {
+    let progressInterval: NodeJS.Timeout;
+    if (isPlaying) {
+      progressInterval = setInterval(updateProgress, 100);
+    }
+    return () => clearInterval(progressInterval);
+  }, [isPlaying, updateProgress]);
+
 
   const togglePlay = useCallback(() => {
     if (currentSong) {
@@ -509,5 +545,3 @@ export function usePlayer(): PlayerContextType {
   }
   return context;
 }
-
-    

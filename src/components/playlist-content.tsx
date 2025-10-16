@@ -31,7 +31,7 @@ export function PlaylistContent({ songs }: { songs: Song[] }) {
             )}
             onDoubleClick={() => playSong(song, songs)}
           >
-            <div className="flex items-center justify-center">
+            <div className="flex items-center justify-center h-4 w-4">
                 <div className={cn("w-4 h-4 text-center text-muted-foreground group-hover:hidden", isCurrentlyPlaying && "text-primary")}>
                     {isCurrentlyPlaying ? <Pause size={16} className="fill-current"/> : index + 1}
                 </div>

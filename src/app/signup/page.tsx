@@ -61,7 +61,19 @@ export default function SignupPage() {
           },
           streamingServices: {
             youtubeMusic: true,
-          }
+          },
+          trackTransitions: {
+            gaplessPlayback: true,
+            automix: false,
+            crossfade: 0,
+          },
+          listeningControls: {
+            autoPlay: true,
+            monoAudio: false,
+            equaliserEnabled: false,
+            volumeNormalization: true,
+          },
+          equaliser: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         }
       };
       await setDoc(userDocRef, userData);
@@ -70,6 +82,7 @@ export default function SignupPage() {
   const onSubmit = async (data: SignupFormValues) => {
     setIsLoading(true);
     try {
+      if (!auth) throw new Error("Authentication service not available.");
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       await updateProfile(userCredential.user, { displayName: data.username });
       await createUserDocument(userCredential.user, data.username);
@@ -89,8 +102,9 @@ export default function SignupPage() {
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
-    const provider = new GoogleAuthProvider();
     try {
+      if (!auth) throw new Error("Authentication service not available.");
+      const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       await createUserDocument(result.user);
       toast({ title: 'Account created successfully!' });
@@ -174,5 +188,3 @@ export default function SignupPage() {
     </div>
   );
 }
-
-    

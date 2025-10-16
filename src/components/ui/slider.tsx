@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -13,14 +14,21 @@ const Slider = React.forwardRef<
     ref={ref}
     className={cn(
       "relative flex w-full touch-none select-none items-center group",
+      props.orientation === 'vertical' && "flex-col h-full w-auto",
       className
     )}
     {...props}
   >
-    <SliderPrimitive.Track className="relative h-1 w-full grow overflow-hidden rounded-full bg-secondary/50">
-      <SliderPrimitive.Range className="absolute h-full bg-foreground group-hover:bg-accent" />
+    <SliderPrimitive.Track className={cn(
+        "relative w-full grow overflow-hidden rounded-full bg-secondary/50",
+        props.orientation === 'vertical' ? "h-full w-1" : "h-1 w-full"
+    )}>
+      <SliderPrimitive.Range className={cn(
+          "absolute bg-foreground group-hover:bg-accent",
+           props.orientation === 'vertical' ? "w-full bottom-0" : "h-full"
+        )} />
     </SliderPrimitive.Track>
-    <SliderPrimitive.Thumb className="hidden group-hover:block h-3 w-3 rounded-full border-primary bg-foreground ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50" />
+    <SliderPrimitive.Thumb className="block h-3 w-3 rounded-full border-primary bg-foreground ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50" />
   </SliderPrimitive.Root>
 ))
 Slider.displayName = SliderPrimitive.Root.displayName

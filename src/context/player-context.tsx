@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef, Dispatch, SetStateAction } from 'react';
@@ -7,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import YouTube from 'react-youtube';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useDoc, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { doc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, addDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { generatePersonalizedRecommendations } from '@/ai/flows/personalized-recommendations';
 import { searchYoutube } from '@/ai/flows/youtube-search';
@@ -28,6 +29,9 @@ export type LyricLine = {
   text: string;
 };
 
+const BANDS = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+const DEFAULT_EQ_SETTINGS = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
 interface PlayerContextType {
   currentSong: Song | null;
   isPlaying: boolean;
@@ -42,10 +46,14 @@ interface PlayerContextType {
   showVideo: boolean;
   audioElement: HTMLAudioElement | null;
   youtubePlayer: any | null; // YouTube player instance
+  isEqEnabled: boolean;
+  equaliserSettings: number[];
   setLyrics: Dispatch<SetStateAction<LyricLine[]>>;
   setIsLyricsLoading: Dispatch<SetStateAction<boolean>>;
   setYoutubePlayer: Dispatch<SetStateAction<any | null>>;
   setCurrentTime: Dispatch<SetStateAction<number>>;
+  setEqualiserSettings: (settings: number[]) => void;
+  toggleEq: () => void;
   toggleShowVideo: () => void;
   toggleFullScreenPlayer: () => void;
   toggleQueue: () => void;
@@ -80,9 +88,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
-  const stereoPannerNodeRef = useRef<StereoPannerNode | null>(null);
   const fadeIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  const eqNodesRef = useRef<BiquadFilterNode[]>([]);
 
   const { user } = useUser();
   const firestore = useFirestore();
@@ -100,8 +108,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       volumeNormalization: true,
       autoPlay: true,
       monoAudio: false,
+      equaliserEnabled: false,
   };
   const trackTransitions = userData?.settings?.trackTransitions || { gaplessPlayback: true, automix: false, crossfade: 0 };
+  
+  const [equaliserSettings, _setEqualiserSettings] = useState<number[]>(userData?.settings?.equaliser || DEFAULT_EQ_SETTINGS);
+  const [isEqEnabled, setIsEqEnabled] = useState(listeningControls.equaliserEnabled);
 
 
   const { toast } = useToast();
@@ -135,49 +147,87 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     };
   }, [handleSongEnd]);
 
-  useEffect(() => {
+  const setupAudioContext = useCallback(() => {
     if (!audioElement || typeof window === 'undefined') return;
 
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    const audioContext = audioContextRef.current;
+    
+    if (!audioSourceRef.current || audioSourceRef.current.mediaElement !== audioElement) {
+        try {
+          audioSourceRef.current = audioContext.createMediaElementSource(audioElement);
+        } catch(e) {
+            return; // Already connected or other error
+        }
+    }
+    let lastNode: AudioNode = audioSourceRef.current;
+
+    // Disconnect previous nodes to rebuild the chain
+    try {
+      lastNode.disconnect();
+    } catch(e) { /* ignore */ }
+
+    // Equaliser setup
+    if (isEqEnabled) {
+      if (eqNodesRef.current.length === 0) {
+        eqNodesRef.current = BANDS.map((frequency, i) => {
+          const filter = audioContext.createBiquadFilter();
+          filter.type = i === 0 ? 'lowshelf' : (i === BANDS.length - 1 ? 'highshelf' : 'peaking');
+          filter.frequency.value = frequency;
+          filter.gain.value = equaliserSettings[i];
+          filter.Q.value = 1.41;
+          return filter;
+        });
+      }
+      eqNodesRef.current.forEach(filter => {
+        lastNode.connect(filter);
+        lastNode = filter;
+      });
+    }
+
+    // Mono audio setup
     if (listeningControls.monoAudio) {
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
-      const audioContext = audioContextRef.current;
-      if (!audioSourceRef.current || audioSourceRef.current.mediaElement !== audioElement) {
-          try {
-            audioSourceRef.current = audioContext.createMediaElementSource(audioElement);
-          } catch(e) {
-              // This can happen if the source is already connected.
-              return;
-          }
-      }
-      
       const splitter = audioContext.createChannelSplitter(2);
       const merger = audioContext.createChannelMerger(1);
-      
-      try {
-        audioSourceRef.current.disconnect();
-      } catch (e) {
-        // Disconnecting a not-yet-connected node is fine.
-      }
-      
-      audioSourceRef.current.connect(splitter);
-      splitter.connect(merger, 0, 0); // connect left input to the merger
-      splitter.connect(merger, 1, 0); // connect right input to the merger as well
-      merger.connect(audioContext.destination);
-
-    } else {
-      if (audioSourceRef.current && audioContextRef.current) {
-        try {
-          audioSourceRef.current.disconnect();
-          audioSourceRef.current.connect(audioContextRef.current.destination);
-        } catch(e) {
-          // Errors can happen if connections are already in a certain state.
-        }
-      }
+      lastNode.connect(splitter);
+      splitter.connect(merger, 0, 0);
+      splitter.connect(merger, 1, 0);
+      lastNode = merger;
     }
-  }, [listeningControls.monoAudio, audioElement, currentSong]);
 
+    lastNode.connect(audioContext.destination);
+
+  }, [audioElement, isEqEnabled, listeningControls.monoAudio, equaliserSettings]);
+
+  useEffect(() => {
+    setupAudioContext();
+  }, [setupAudioContext]);
+  
+  useEffect(() => {
+    setIsEqEnabled(listeningControls.equaliserEnabled);
+  }, [listeningControls.equaliserEnabled]);
+  
+  const setEqualiserSettings = (settings: number[]) => {
+    _setEqualiserSettings(settings);
+    if(userDocRef) {
+      setDoc(userDocRef, { settings: { equaliser: settings } }, { merge: true });
+    }
+    eqNodesRef.current.forEach((filter, i) => {
+      if(filter) filter.gain.value = settings[i];
+    });
+  };
+
+  const toggleEq = () => {
+    const newEqState = !isEqEnabled;
+    setIsEqEnabled(newEqState);
+    if(userDocRef) {
+      setDoc(userDocRef, { settings: { listeningControls: { equaliserEnabled: newEqState } } }, { merge: true });
+    }
+    // Re-run the audio context setup to apply/remove EQ
+    setupAudioContext();
+  };
 
   useEffect(() => {
     const updateConnectionType = () => {
@@ -611,6 +661,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setYoutubePlayer,
     setCurrentTime,
     handleCreatePlaylist,
+    equaliserSettings,
+    setEqualiserSettings,
+    isEqEnabled,
+    toggleEq,
   };
 
   return (
@@ -642,5 +696,3 @@ export function usePlayer(): PlayerContextType {
   }
   return context;
 }
-
-    

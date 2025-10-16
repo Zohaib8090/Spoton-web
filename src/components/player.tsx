@@ -10,6 +10,11 @@ import {
   Heart,
   Shuffle,
   Repeat,
+  Mic2,
+  ListMusic,
+  Laptop2,
+  Volume2,
+  Maximize2
 } from "lucide-react";
 import { usePlayer } from "@/context/player-context";
 import { Slider } from "@/components/ui/slider";
@@ -60,9 +65,9 @@ export function Player() {
   };
 
   return (
-    <footer className="w-full bg-card border-t border-border px-4 py-2">
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-        <div className="flex items-center gap-4 w-full min-w-0">
+    <footer className="w-full bg-black border-t border-border px-4 py-3 text-foreground">
+      <div className="grid grid-cols-[auto_1fr_auto] items-center gap-4">
+        <div className="flex items-center gap-3 w-64 min-w-0">
           {currentSong ? (
             <>
               <Image
@@ -74,61 +79,68 @@ export function Player() {
                 data-ai-hint="album cover"
               />
               <div className="truncate">
-                <p className="font-semibold truncate">{currentSong.title}</p>
-                <p className="text-sm text-muted-foreground truncate">{currentSong.artist}</p>
+                <p className="font-semibold text-sm truncate hover:underline cursor-pointer">{currentSong.title}</p>
+                <p className="text-xs text-muted-foreground truncate hover:underline cursor-pointer">{currentSong.artist}</p>
               </div>
-              <Button variant="ghost" size="icon" className="ml-2 hidden sm:inline-flex">
-                <Heart className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className="ml-2 hidden sm:inline-flex text-accent">
+                <Heart className="h-4 w-4 fill-current" />
               </Button>
             </>
           ) : (
-             <div className="h-[56px] flex items-center text-muted-foreground">Select a song to play</div>
+             <div className="h-[56px] flex items-center text-muted-foreground"></div>
           )}
         </div>
 
-        <div className="flex flex-col items-center justify-center gap-2">
+        <div className="flex flex-col items-center justify-center gap-2 w-full max-w-2xl mx-auto">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" disabled={!currentSong} className="hidden sm:inline-flex">
-              <Shuffle className="h-5 w-5 text-muted-foreground" />
+            <Button variant="ghost" size="icon" disabled={!currentSong} className="text-muted-foreground hover:text-foreground">
+              <Shuffle size={18} />
             </Button>
-            <Button variant="ghost" size="icon" onClick={playPrev} disabled={!currentSong}>
-              <SkipBack className="h-6 w-6" />
+            <Button variant="ghost" size="icon" onClick={playPrev} disabled={!currentSong} className="text-muted-foreground hover:text-foreground">
+              <SkipBack size={20} className="fill-current" />
             </Button>
             <Button
               size="icon"
-              className="w-12 h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+              className="w-8 h-8 rounded-full bg-foreground text-background hover:bg-white/90 scale-105"
               onClick={togglePlay}
               disabled={!currentSong}
             >
               {isPlaying ? (
-                <Pause className="h-7 w-7 fill-current" />
+                <Pause size={16} className="fill-current" />
               ) : (
-                <Play className="h-7 w-7 fill-current ml-1" />
+                <Play size={16} className="fill-current ml-0.5" />
               )}
             </Button>
-            <Button variant="ghost" size="icon" onClick={playNext} disabled={!currentSong}>
-              <SkipForward className="h-6 w-6" />
+            <Button variant="ghost" size="icon" onClick={playNext} disabled={!currentSong} className="text-muted-foreground hover:text-foreground">
+              <SkipForward size={20} className="fill-current" />
             </Button>
-            <Button variant="ghost" size="icon" disabled={!currentSong} className="hidden sm:inline-flex">
-              <Repeat className="h-5 w-5 text-muted-foreground" />
+            <Button variant="ghost" size="icon" disabled={!currentSong} className="text-muted-foreground hover:text-foreground">
+              <Repeat size={18} />
             </Button>
           </div>
-          <div className="w-full max-w-md hidden md:flex items-center gap-2">
+          <div className="w-full flex items-center gap-2">
             <span className="text-xs text-muted-foreground">{formatTime(progress)}</span>
             <Slider
               value={[progress]}
               onValueChange={(value) => setProgress(value[0])}
               max={100}
               step={1}
-              className={cn("w-full", !currentSong && "opacity-50")}
+              className={cn("w-full h-1 group", !currentSong && "opacity-50")}
               disabled={!currentSong}
             />
             <span className="text-xs text-muted-foreground">{currentSong?.duration || "0:00"}</span>
           </div>
         </div>
 
-        <div className="flex items-center justify-end">
-          {/* Volume controls could go here */}
+        <div className="flex items-center justify-end gap-2 w-64">
+          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><Mic2 size={18}/></Button>
+          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><ListMusic size={18}/></Button>
+          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><Laptop2 size={18}/></Button>
+          <div className="flex items-center gap-2 w-32">
+            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><Volume2 size={18}/></Button>
+            <Slider defaultValue={[100]} max={100} step={1} className="h-1" />
+          </div>
+          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><Maximize2 size={18}/></Button>
         </div>
       </div>
     </footer>

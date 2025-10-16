@@ -5,8 +5,8 @@ import { PlayerProvider } from '@/context/player-context';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'HarmonyStream',
-  description: 'Stream music from multiple services.',
+  title: 'Spotify Clone',
+  description: 'A Spotify-like music streaming app.',
 };
 
 export default function RootLayout({

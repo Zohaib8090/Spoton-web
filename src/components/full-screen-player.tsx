@@ -3,6 +3,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import Image from "next/image";
+import YouTube from "react-youtube";
 import {
   Play,
   Pause,
@@ -14,7 +15,8 @@ import {
   ChevronDown,
   Shuffle,
   Repeat,
-  Repeat1
+  Repeat1,
+  Youtube
 } from "lucide-react";
 import { usePlayer } from "@/context/player-context";
 import { Slider } from "@/components/ui/slider";
@@ -38,6 +40,9 @@ export function FullScreenPlayer() {
     loop,
     toggleLoop,
     toggleQueue,
+    showVideo,
+    toggleShowVideo,
+    setYoutubePlayer
   } = usePlayer();
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState("0:00");
@@ -104,6 +109,14 @@ export function FullScreenPlayer() {
   
   const displayDuration = currentSong?.duration !== "0:00" ? currentSong?.duration : duration;
 
+  const onPlayerReady = (event: any) => {
+    setYoutubePlayer(event.target);
+  };
+
+  const onPlayerEnd = () => {
+    playNext();
+  };
+
   if (!currentSong) return null;
 
   return (
@@ -117,18 +130,36 @@ export function FullScreenPlayer() {
             </SheetHeader>
             
             <div className="flex-1 flex flex-col items-center justify-center gap-8 pt-8">
-                 <Image
-                    src={currentSong.albumArt}
-                    alt={currentSong.album}
-                    width={500}
-                    height={500}
-                    className="rounded-lg shadow-2xl aspect-square object-cover w-full max-w-sm"
-                    data-ai-hint="album cover"
-                    unoptimized={currentSong.isFromYouTube}
-                />
+                 <div className="w-full max-w-sm aspect-square">
+                    {currentSong.isFromYouTube && showVideo ? (
+                        <YouTube
+                            videoId={currentSong.id}
+                            onReady={onPlayerReady}
+                            onEnd={onPlayerEnd}
+                            opts={{
+                                height: '100%',
+                                width: '100%',
+                                playerVars: {
+                                autoplay: 1,
+                                },
+                            }}
+                            className="w-full h-full rounded-lg shadow-2xl overflow-hidden"
+                        />
+                    ) : (
+                        <Image
+                            src={currentSong.albumArt}
+                            alt={currentSong.album}
+                            width={500}
+                            height={500}
+                            className="rounded-lg shadow-2xl aspect-square object-cover w-full h-full"
+                            data-ai-hint="album cover"
+                            unoptimized={currentSong.isFromYouTube}
+                        />
+                    )}
+                </div>
 
                 <div className="text-center">
-                    <h2 className="text-base font-bold tracking-tight">{currentSong.title}</h2>
+                    <h2 className="text-xl font-bold tracking-tight">{currentSong.title}</h2>
                     <p className="text-sm text-muted-foreground">{currentSong.artist}</p>
                 </div>
             </div>
@@ -191,6 +222,16 @@ export function FullScreenPlayer() {
                  <div className="flex items-center justify-between gap-2">
                     <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><Laptop2 size={18}/></Button>
                     <div className="flex items-center gap-2">
+                        {currentSong.isFromYouTube && (
+                            <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={toggleShowVideo}
+                                className={cn("text-muted-foreground hover:text-foreground", showVideo && "text-primary")}
+                            >
+                                <Youtube size={18}/>
+                            </Button>
+                        )}
                         <Button variant="ghost" size="icon" onClick={toggleQueue} className="text-muted-foreground hover:text-foreground"><Mic2 size={18}/></Button>
                         <Button variant="ghost" size="icon" onClick={toggleQueue} className="text-muted-foreground hover:text-foreground"><ListMusic size={18}/></Button>
                     </div>

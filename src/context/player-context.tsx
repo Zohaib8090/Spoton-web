@@ -5,6 +5,7 @@ import React, { createContext, useContext, useState, ReactNode, useCallback, use
 import type { Song } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import YouTube from 'react-youtube';
+import { cn } from '@/lib/utils';
 
 type LoopMode = 'none' | 'playlist' | 'song';
 type PlaybackQuality = 'auto' | 'high' | 'standard' | 'low';
@@ -28,11 +29,14 @@ interface PlayerContextType {
   lyrics: LyricLine[];
   isLyricsLoading: boolean;
   playbackQuality: PlaybackQuality;
+  showVideo: boolean;
   audioElement: HTMLAudioElement | null;
   youtubePlayer: any | null; // YouTube player instance
   setLyrics: Dispatch<SetStateAction<LyricLine[]>>;
   setIsLyricsLoading: Dispatch<SetStateAction<boolean>>;
   setPlaybackQuality: Dispatch<SetStateAction<PlaybackQuality>>;
+  setYoutubePlayer: Dispatch<SetStateAction<any | null>>;
+  toggleShowVideo: () => void;
   toggleFullScreenPlayer: () => void;
   toggleQueue: () => void;
   playSong: (song: Song, playlist?: Song[]) => void;
@@ -61,6 +65,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [lyrics, setLyrics] = useState<LyricLine[]>([]);
   const [isLyricsLoading, setIsLyricsLoading] = useState(false);
   const [playbackQuality, setPlaybackQuality] = useState<PlaybackQuality>('auto');
+  const [showVideo, setShowVideo] = useState(false);
+
   const { toast } = useToast();
 
   const currentSongRef = useRef(currentSong);
@@ -237,7 +243,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const toggleFullScreenPlayer = useCallback(() => {
     if (currentSong) {
-        setIsFullScreenPlayerOpen(prev => !prev);
+        setIsFullScreenPlayerOpen(prev => {
+            if (!prev) setShowVideo(false); // Reset to album art view when opening
+            return !prev;
+        });
     }
   }, [currentSong]);
 
@@ -246,35 +255,52 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const toggleShuffle = useCallback(() => {
-    const newShuffleState = !shuffle;
-    setShuffle(newShuffleState);
-    if (newShuffleState) {
-        setShuffledPlaylist([...playlist].sort(() => Math.random() - 0.5));
-        toast({ description: "Shuffle enabled" });
-    } else {
-        toast({ description: "Shuffle disabled" });
+    setShuffle(prev => {
+        const newShuffleState = !prev;
+        if (newShuffleState) {
+            setShuffledPlaylist([...playlist].sort(() => Math.random() - 0.5));
+        }
+        return newShuffleState;
+    });
+    // Toast is now triggered in a separate effect
+  }, [playlist]);
+
+  useEffect(() => {
+    if (shuffle) {
+      toast({ description: "Shuffle enabled" });
+    } else if (shuffle === false && playlist.length > 0) { // Check playlist to avoid toast on initial load
+      toast({ description: "Shuffle disabled" });
     }
-  }, [shuffle, playlist, toast]);
+  }, [shuffle, playlist.length, toast]);
 
   const toggleLoop = useCallback(() => {
     setLoop(currentLoop => {
-        let newLoopMode: LoopMode;
-        let description = "";
-        
-        if (currentLoop === 'none') {
-            newLoopMode = 'playlist';
-            description = "Looping playlist";
-        } else if (currentLoop === 'playlist') {
-            newLoopMode = 'song';
-            description = "Looping song";
-        } else {
-            newLoopMode = 'none';
-            description = "Looping disabled";
-        }
-        toast({ description });
-        return newLoopMode;
+        if (currentLoop === 'none') return 'playlist';
+        if (currentLoop === 'playlist') return 'song';
+        return 'none';
     });
-  }, [toast]);
+     // Toast is now triggered in a separate effect
+  }, []);
+
+  useEffect(() => {
+    let description = "";
+    if (loop === 'playlist') {
+        description = "Looping playlist";
+    } else if (loop === 'song') {
+        description = "Looping song";
+    } else {
+        // Only show "loop disabled" if it was previously enabled.
+        if (playlist.length > 0) description = "Looping disabled";
+    }
+    if (description) {
+      toast({ description });
+    }
+  }, [loop, playlist.length, toast]);
+
+
+  const toggleShowVideo = useCallback(() => {
+      setShowVideo(prev => !prev);
+  }, []);
   
   const onPlayerReady = (event: any) => {
     setYoutubePlayer(event.target);
@@ -313,12 +339,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setIsLyricsLoading,
     playbackQuality,
     setPlaybackQuality,
+    showVideo,
+    toggleShowVideo,
+    setYoutubePlayer,
   };
 
   return (
     <PlayerContext.Provider value={value}>
       {children}
-      <div className="hidden">
+      <div className={cn('hidden', currentSong?.isFromYouTube && !showVideo && 'block')}>
         <YouTube 
           videoId={currentSong?.isFromYouTube ? currentSong.id : undefined}
           onReady={onPlayerReady}

@@ -63,11 +63,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Link href="/"><Home /> <span>Home</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive('/search')} className="hover:text-foreground">
-                    <Link href="/search"><Search /> <span>Search</span></Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
                 {user && (
                   <>
                     <SidebarMenuItem>

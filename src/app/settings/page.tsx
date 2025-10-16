@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { BellRing, Video, Music, Wifi, Signal, Youtube, Mail, GitBranch } from 'lucide-react';
+import { BellRing, Video, Music, Wifi, Signal, Youtube, Mail, GitBranch, Play, Speaker, Equalizer, Ear } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
@@ -54,6 +54,13 @@ export default function SettingsPage() {
     automix: false,
     crossfade: 0,
   });
+  
+  const [listeningControls, setListeningControls] = useState({
+    autoPlay: true,
+    monoAudio: false,
+    equaliser: false,
+    volumeNormalization: true,
+  });
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -73,6 +80,9 @@ export default function SettingsPage() {
     }
     if (userData?.settings?.trackTransitions) {
       setTrackTransitions(userData.settings.trackTransitions);
+    }
+    if (userData?.settings?.listeningControls) {
+      setListeningControls(userData.settings.listeningControls);
     }
   }, [user, isUserLoading, router, userData]);
 
@@ -139,6 +149,12 @@ export default function SettingsPage() {
     const newTransitions = { ...trackTransitions, crossfade: value[0] };
     setTrackTransitions(newTransitions);
     updateSetting('trackTransitions', newTransitions);
+  };
+
+  const handleListeningControlChange = (control: keyof typeof listeningControls, value: boolean) => {
+    const newControls = { ...listeningControls, [control]: value };
+    setListeningControls(newControls);
+    updateSetting('listeningControls', newControls);
   };
 
   const handleNotificationPermission = async () => {
@@ -296,6 +312,63 @@ export default function SettingsPage() {
               checked={notificationPrefs.playlistUpdates}
               onCheckedChange={(checked) => handleNotificationPrefChange('playlistUpdates', checked)}
               disabled={notificationPermission !== 'granted'} 
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Listening Controls</CardTitle>
+          <CardDescription>Customize your listening experience.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+            <Label htmlFor="auto-play" className="flex flex-col space-y-1">
+              <span>Auto Play</span>
+              <span className="font-normal leading-snug text-muted-foreground">
+                Automatically play similar songs when your music ends.
+              </span>
+            </Label>
+            <Switch 
+              id="auto-play" 
+              checked={listeningControls.autoPlay}
+              onCheckedChange={(checked) => handleListeningControlChange('autoPlay', checked)}
+            />
+          </div>
+          <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+            <Label htmlFor="mono-audio" className="flex flex-col space-y-1">
+              <span>Mono Audio</span>
+              <span className="font-normal leading-snug text-muted-foreground">
+                Makes the left and right speakers play the same audio.
+              </span>
+            </Label>
+            <Switch 
+              id="mono-audio" 
+              checked={listeningControls.monoAudio}
+              onCheckedChange={(checked) => handleListeningControlChange('monoAudio', checked)}
+            />
+          </div>
+          <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+            <Label htmlFor="equaliser" className="flex flex-col space-y-1">
+              <span>Equaliser</span>
+              <span className="font-normal leading-snug text-muted-foreground">
+                Fine-tune your audio with presets or custom settings.
+              </span>
+            </Label>
+            <Button variant="outline" id="equaliser">Configure</Button>
+          </div>
+          <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+            <Label htmlFor="volume-normalization" className="flex flex-col space-y-1">
+              <span>Volume Normalisation</span>
+              <span className="font-normal leading-snug text-muted-foreground">
+                Set the same volume level for all tracks.
+              </span>
+            </Label>
+            <Switch 
+              id="volume-normalization" 
+              checked={listeningControls.volumeNormalization}
+              onCheckedChange={(checked) => handleListeningControlChange('volumeNormalization', checked)}
             />
           </div>
         </CardContent>
@@ -489,3 +562,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    

@@ -30,6 +30,15 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  webpack: (config, { isServer }) => {
+    // This is to solve a bug in jsmediatags that causes a build error
+    config.plugins.push(
+      new (require('webpack').IgnorePlugin)({
+        resourceRegExp: /react-native-fs/,
+      })
+    );
+    return config;
+  }
 };
 
 export default nextConfig;

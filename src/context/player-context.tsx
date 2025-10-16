@@ -36,7 +36,7 @@ interface PlayerContextType {
   currentSong: Song | null;
   isPlaying: boolean;
   playlist: Song[];
-  listeningHistory: string[];
+  listeningHistory: Song[];
   isFullScreenPlayerOpen: boolean;
   isQueueOpen: boolean;
   shuffle: boolean;
@@ -76,7 +76,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playlist, setPlaylist] = useState<Song[]>([]);
   const [shuffledPlaylist, setShuffledPlaylist] = useState<Song[]>([]);
-  const [listeningHistory, setListeningHistory] = useState<string[]>([]);
+  const [listeningHistory, setListeningHistory] = useState<Song[]>([]);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const [youtubePlayer, setYoutubePlayer] = useState<any | null>(null);
   const [isFullScreenPlayerOpen, setIsFullScreenPlayerOpen] = useState(false);
@@ -180,7 +180,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           filter.type = i === 0 ? 'lowshelf' : (i === BANDS.length - 1 ? 'highshelf' : 'peaking');
           filter.frequency.value = frequency;
           filter.gain.value = equaliserSettings[i];
-          filter.Q.value = 1.41; // Using a standard Q value
+          filter.Q.value = 1.41;
           return filter;
         });
       } else {
@@ -201,7 +201,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (listeningControls.monoAudio) {
       pannerNodeRef.current.pan.value = 0; // Center pan for mono
     } else {
-      // Ensure balance is a finite number, default to 0
       pannerNodeRef.current.pan.value = typeof listeningControls.balance === 'number' && isFinite(listeningControls.balance) ? listeningControls.balance : 0;
     }
     lastNode.connect(pannerNodeRef.current);
@@ -211,7 +210,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (!gainNodeRef.current) {
       gainNodeRef.current = audioContext.createGain();
     }
-    // Convert dB to linear gain value
     gainNodeRef.current.gain.value = Math.pow(10, gain / 20);
     lastNode.connect(gainNodeRef.current);
     lastNode = gainNodeRef.current;
@@ -255,7 +253,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if(userDocRef) {
       setDoc(userDocRef, { settings: { listeningControls: { equaliserEnabled: newEqState } } }, { merge: true });
     }
-    // Re-run the audio context setup to apply/remove EQ
     setupAudioContext();
   };
 
@@ -310,7 +307,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
 
     if (song.audioSrc && !song.audioSrc.startsWith('blob:')) {
-        setListeningHistory(prev => [...new Set([`${song.title} - ${song.artist}`, ...prev])].slice(0, 20));
+      setListeningHistory(prev => {
+        const newHistory = [song, ...prev.filter(s => s.id !== song.id)];
+        return newHistory.slice(0, 20);
+      });
     }
     
     if (!isAutoplay) {
@@ -371,10 +371,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           nextIndex = 0;
           playSong(activePlaylist[nextIndex], playlist);
         } else if (listeningControls.autoPlay) {
-            // Autoplay logic
             toast({ title: 'Autoplay', description: 'Playing a recommended song.' });
             try {
-              const result = await generatePersonalizedRecommendations({ listeningHistory });
+              const history = listeningHistory.map(s => `${s.title} - ${s.artist}`);
+              const result = await generatePersonalizedRecommendations({ listeningHistory: history });
               if (result.recommendations.length > 0) {
                 await findAndPlaySong(result.recommendations[0]);
               } else {
@@ -450,7 +450,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (youtubePlayer && typeof youtubePlayer.getIframe === 'function' && youtubePlayer.getIframe()) {
-      const isVideo = showVideo; // or some other logic to determine if it's video
+      const isVideo = showVideo;
       const qualitySetting = isVideo ? playbackQualitySettings.video[connectionType] : playbackQualitySettings.audio[connectionType];
       
       let quality: string;
@@ -586,7 +586,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const toggleFullScreenPlayer = useCallback(() => {
     if (currentSong) {
         setIsFullScreenPlayerOpen(prev => {
-            if (!prev) setShowVideo(false); // Reset to album art view when opening
+            if (!prev) setShowVideo(false);
             return !prev;
         });
     }
@@ -654,7 +654,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   };
   
   const onPlayerStateChange = (event: any) => {
-    // 0 = ended
     if (event.data === 0) {
         handleSongEnd();
     }
@@ -759,5 +758,3 @@ export function usePlayer(): PlayerContextType {
   }
   return context;
 }
-
-    

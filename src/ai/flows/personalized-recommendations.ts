@@ -47,9 +47,7 @@ const prompt = ai.definePrompt({
   - {{this}}
   {{/each}}
 
-  Recommendations:`, //The recommendations should be a JSON array of strings
-  // examples:
-  //[{"recommendations": ["Song 1 - Artist 1", "Song 2 - Artist 2", "Song 3 - Artist 3"]}]
+  Recommendations:`,
 });
 
 const personalizedRecommendationsFlow = ai.defineFlow(

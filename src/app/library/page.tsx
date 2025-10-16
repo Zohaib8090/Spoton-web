@@ -9,18 +9,19 @@ import { AlbumArtwork } from '@/components/album-artwork';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { collection } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Music, FolderUp } from 'lucide-react';
+import { PlusCircle, Music, FolderUp, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PlaylistContent } from '@/components/playlist-content';
 import type { Song } from '@/lib/types';
 import { usePlayer } from '@/context/player-context';
+import { HistoryItem } from '@/components/history-item';
 
 export default function LibraryPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
-  const { handleCreatePlaylist } = usePlayer();
+  const { handleCreatePlaylist, listeningHistory } = usePlayer();
   const [localSongs, setLocalSongs] = useState<Song[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -94,6 +95,7 @@ export default function LibraryPage() {
       <Tabs defaultValue="playlists" className="space-y-6">
         <TabsList>
           <TabsTrigger value="playlists">Playlists</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
           <TabsTrigger value="albums">Albums</TabsTrigger>
           <TabsTrigger value="artists">Artists</TabsTrigger>
           <TabsTrigger value="liked">Liked Songs</TabsTrigger>
@@ -121,6 +123,21 @@ export default function LibraryPage() {
                     <p>You haven&apos;t created any playlists yet.</p>
                 </div>
             )}
+        </TabsContent>
+         <TabsContent value="history">
+          <div className="flex flex-col gap-2">
+            {listeningHistory.length > 0 ? (
+              listeningHistory.map((song) => (
+                <HistoryItem key={song.id} song={song} />
+              ))
+            ) : (
+              <div className="text-center text-muted-foreground py-12 flex flex-col items-center gap-4">
+                  <History className="h-12 w-12" />
+                  <h3 className="text-lg font-semibold">No Listening History</h3>
+                  <p>Songs you play will appear here.</p>
+              </div>
+            )}
+          </div>
         </TabsContent>
         <TabsContent value="local">
            <div className="space-y-4">

@@ -5,7 +5,7 @@ import { PlayerProvider } from '@/context/player-context';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'HarmonyStream',
+  title: 'spoton',
   description: 'Stream music from all your favorite services in one place.',
 };
 

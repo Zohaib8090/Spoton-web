@@ -1,0 +1,15 @@
+diff --git a/node_modules/jsmediatags/build2/FileReader.js b/node_modules/jsmediatags/build2/FileReader.js
+index 4014c27..073a4b6 100644
+--- a/node_modules/jsmediatags/build2/FileReader.js
++++ b/node_modules/jsmediatags/build2/FileReader.js
+@@ -29,10 +29,6 @@
+     return;
+   }
+ 
+-  if (typeof process !== "undefined" && !process.browser) {
+-    return require("./ReactNativeFileReader").default;
+-  }
+-
+   if (typeof window !== "undefined") {
+     return require("./XhrFileReader").default;
+   }

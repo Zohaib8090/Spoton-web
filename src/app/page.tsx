@@ -31,8 +31,6 @@ export default function Home() {
     );
   }
   
-  const featuredPlaylists = playlists.slice(0, 4);
-
   return (
     <div className="space-y-8 pb-8">
       <div>
@@ -55,10 +53,10 @@ export default function Home() {
       
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold tracking-tight">Featured Playlists</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Playlists</h2>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {featuredPlaylists.map((playlist) => (
+          {playlists.map((playlist) => (
             <AlbumArtwork 
               key={playlist.id} 
               album={{

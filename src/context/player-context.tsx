@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef, Dispatch, SetStateAction } from 'react';
@@ -715,5 +714,3 @@ export function usePlayer(): PlayerContextType {
   }
   return context;
 }
-
-    

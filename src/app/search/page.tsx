@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, ChangeEvent } from "react";
@@ -10,6 +11,9 @@ import { Button } from "@/components/ui/button";
 import { searchYoutube } from "@/ai/flows/youtube-search";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useUser, useFirestore } from '@/firebase';
+import { collection, addDoc, deleteDoc, query, where, getDocs, serverTimestamp, getCountFromServer } from 'firebase/firestore';
+
 
 type YoutubeResult = {
     id: string;
@@ -23,8 +27,10 @@ export default function SearchPage() {
   const [query, setQuery] = useState("");
   const [youtubeResults, setYoutubeResults] = useState<YoutubeResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const { playSong, currentSong, isPlaying } = usePlayer();
+  const { playSong, currentSong } = usePlayer();
   const { toast } = useToast();
+  const { user } = useUser();
+  const firestore = useFirestore();
 
   const handleYoutubeSearch = async (searchQuery: string) => {
       if (searchQuery.trim().length < 2) {
@@ -82,6 +88,57 @@ export default function SearchPage() {
     }));
     playSong(song, playlist);
   };
+  
+  const handleDoubleClickPin = async (ytResult: YoutubeResult) => {
+    if (!user || !firestore) {
+        toast({ variant: 'destructive', title: 'You must be logged in to pin items.' });
+        return;
+    }
+
+    const pinsCollection = collection(firestore, 'users', user.uid, 'pins');
+    const q = query(pinsCollection, where('itemId', '==', ytResult.id));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+        // Pin the item
+        try {
+            const countSnapshot = await getCountFromServer(pinsCollection);
+            if (countSnapshot.data().count >= 9) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Pin limit reached',
+                    description: 'You can only pin up to 9 items.',
+                });
+                return;
+            }
+
+            await addDoc(pinsCollection, {
+                itemId: ytResult.id,
+                type: 'song',
+                name: ytResult.title,
+                artist: ytResult.artist,
+                albumArt: ytResult.thumbnail,
+                pinnedAt: serverTimestamp(),
+            });
+            toast({ title: 'Pinned to your library' });
+        } catch (error) {
+            console.error("Error pinning item: ", error);
+            toast({ variant: 'destructive', title: 'Failed to pin item' });
+        }
+    } else {
+        // Unpin the item
+        try {
+            querySnapshot.forEach((doc) => {
+                deleteDoc(doc.ref);
+            });
+            toast({ title: 'Unpinned from your library' });
+        } catch (error) {
+            console.error("Error unpinning item: ", error);
+            toast({ variant: 'destructive', title: 'Failed to unpin item' });
+        }
+    }
+  };
+
 
   const hasResults = youtubeResults.length > 0;
 
@@ -118,6 +175,7 @@ export default function SearchPage() {
                         isActive && "bg-muted"
                     )}
                     onClick={() => handlePlayYoutube(result)}
+                    onDoubleClick={() => handleDoubleClickPin(result)}
                 >
                 <Image 
                     src={result.thumbnail}
@@ -150,3 +208,4 @@ export default function SearchPage() {
     </div>
   );
 }
+

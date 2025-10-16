@@ -101,7 +101,7 @@ export function Player() {
             </Button>
             <Button
               size="icon"
-              className="w-8 h-8 rounded-full bg-foreground text-background hover:bg-white/90 scale-105"
+              className="w-8 h-8 rounded-full bg-foreground text-background hover:bg-white/90"
               onClick={togglePlay}
               disabled={!currentSong}
             >

@@ -257,21 +257,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const toggleShuffle = useCallback(() => {
-    const newShuffleState = !shuffle;
-    setShuffle(newShuffleState);
-    if (newShuffleState) {
-        setShuffledPlaylist([...playlist].sort(() => Math.random() - 0.5));
-    }
-  }, [shuffle, playlist]);
-
-  useEffect(() => {
-    if (playlist.length === 0) return;
-    if (shuffle) {
-      toast({ description: "Shuffle enabled" });
-    } else {
-      toast({ description: "Shuffle disabled" });
-    }
-  }, [shuffle, playlist.length, toast]);
+    setShuffle(prev => !prev);
+  }, []);
 
   const toggleLoop = useCallback(() => {
     setLoop(currentLoop => {
@@ -280,20 +267,33 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         return 'none';
     });
   }, []);
+  
+  useEffect(() => {
+    if (playlist.length === 0) return;
+
+    const handleShuffleToast = () => {
+      toast({ description: shuffle ? "Shuffle enabled" : "Shuffle disabled" });
+    }
+    handleShuffleToast();
+
+  }, [shuffle, playlist.length, toast])
 
   useEffect(() => {
     if (playlist.length === 0) return;
-    let description = "";
-    if (loop === 'playlist') {
-        description = "Looping playlist";
-    } else if (loop === 'song') {
-        description = "Looping song";
-    } else {
-        description = "Looping disabled";
-    }
-    toast({ description });
-  }, [loop, playlist.length, toast]);
 
+    const handleLoopToast = () => {
+      let description = "";
+      if (loop === 'playlist') {
+          description = "Looping playlist";
+      } else if (loop === 'song') {
+          description = "Looping song";
+      } else {
+          description = "Looping disabled";
+      }
+      toast({ description });
+    }
+    handleLoopToast();
+  }, [loop, playlist.length, toast]);
 
   const toggleShowVideo = useCallback(() => {
       let time = 0;

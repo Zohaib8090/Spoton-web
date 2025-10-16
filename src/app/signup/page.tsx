@@ -58,6 +58,9 @@ export default function SignupPage() {
           notifications: {
             newReleases: true,
             playlistUpdates: true,
+          },
+          streamingServices: {
+            youtubeMusic: true,
           }
         }
       };
@@ -171,3 +174,5 @@ export default function SignupPage() {
     </div>
   );
 }
+
+    

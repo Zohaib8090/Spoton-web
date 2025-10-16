@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { BellRing, Video, Music, Wifi, Signal } from 'lucide-react';
+import { BellRing, Video, Music, Wifi, Signal, Youtube } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
@@ -43,6 +43,10 @@ export default function SettingsPage() {
     audio: { wifi: 'standard', cellular: 'standard' },
     video: { wifi: 'standard', cellular: 'standard' }
   });
+  
+  const [streamingServices, setStreamingServices] = useState({
+    youtubeMusic: true,
+  });
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -56,6 +60,9 @@ export default function SettingsPage() {
         audio: { ...prev.audio, ...userData.settings.playbackQuality.audio },
         video: { ...prev.video, ...userData.settings.playbackQuality.video }
       }));
+    }
+    if (userData?.settings?.streamingServices) {
+        setStreamingServices(userData.settings.streamingServices);
     }
   }, [user, isUserLoading, router, userData]);
 
@@ -88,6 +95,12 @@ export default function SettingsPage() {
     const newPrefs = { ...notificationPrefs, [pref]: value };
     setNotificationPrefs(newPrefs);
     updateSetting('notifications', newPrefs);
+  };
+
+  const handleStreamingServiceChange = (service: 'youtubeMusic', value: boolean) => {
+    const newServices = { ...streamingServices, [service]: value };
+    setStreamingServices(newServices);
+    updateSetting('streamingServices', newServices);
   };
   
   const handlePlaybackQualityChange = (
@@ -146,7 +159,7 @@ export default function SettingsPage() {
       <div className="space-y-8">
         <Skeleton className="h-8 w-48" />
         <div className="space-y-6">
-          {[...Array(3)].map((_, i) => (
+          {[...Array(4)].map((_, i) => (
              <Card key={i}>
                 <CardHeader><Skeleton className="h-6 w-1/3" /></CardHeader>
                 <CardContent>
@@ -188,6 +201,31 @@ export default function SettingsPage() {
     <div className="space-y-8">
       <h1 className="text-3xl font-bold">Settings</h1>
       
+       <Card>
+        <CardHeader>
+          <CardTitle>Streaming Services</CardTitle>
+          <CardDescription>Connect and manage your music services.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+            <Label htmlFor="youtube-music" className="flex items-center gap-3">
+              <Youtube className="h-6 w-6 text-[#FF0000]" />
+              <div className="flex flex-col space-y-1">
+                <span>YouTube Music</span>
+                <span className="font-normal leading-snug text-muted-foreground">
+                  Sync your library and playlists from YouTube Music.
+                </span>
+              </div>
+            </Label>
+            <Switch 
+              id="youtube-music" 
+              checked={streamingServices.youtubeMusic}
+              onCheckedChange={(checked) => handleStreamingServiceChange('youtubeMusic', checked)}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Notifications</CardTitle>
@@ -359,3 +397,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    

@@ -13,6 +13,7 @@ interface PlayerContextType {
   togglePlay: () => void;
   playNext: () => void;
   playPrev: () => void;
+  closePlayer: () => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -64,6 +65,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       playSong(playlist[prevIndex], playlist);
     }
   }, [currentSong, playlist, playSong]);
+  
+  const closePlayer = useCallback(() => {
+    setCurrentSong(null);
+    setIsPlaying(false);
+  }, []);
 
   const value = {
     currentSong,
@@ -74,6 +80,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     togglePlay,
     playNext,
     playPrev,
+    closePlayer,
   };
 
   return (

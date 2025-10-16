@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import {
   Play,
@@ -26,11 +26,16 @@ export function Player() {
     togglePlay,
     playNext,
     playPrev,
+    closePlayer,
   } = usePlayer();
   const [progress, setProgress] = useState(0);
+  const [touchStartY, setTouchStartY] = useState(0);
+  const [touchDeltaY, setTouchDeltaY] = useState(0);
+  const playerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setProgress(0);
+    setTouchDeltaY(0);
   }, [currentSong]);
 
   useEffect(() => {
@@ -62,8 +67,35 @@ export function Player() {
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartY(e.targetTouches[0].clientY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const deltaY = e.targetTouches[0].clientY - touchStartY;
+    if (deltaY > 0) { // Only track downward movement
+      setTouchDeltaY(deltaY);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (touchDeltaY > 100) { // Threshold to close
+      closePlayer();
+    }
+    // Reset positions
+    setTouchStartY(0);
+    setTouchDeltaY(0);
+  };
+
   return (
-    <div className="w-full bg-black border-t border-border px-4 py-3 text-foreground">
+    <div
+      ref={playerRef}
+      className="w-full bg-black border-t border-border px-4 py-3 text-foreground transition-transform duration-200 ease-out"
+      style={{ transform: `translateY(${touchDeltaY}px)` }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <div className="grid grid-cols-[auto_1fr_auto] items-center gap-4">
         <div className="flex items-center gap-3 w-64 min-w-0">
           {currentSong ? (

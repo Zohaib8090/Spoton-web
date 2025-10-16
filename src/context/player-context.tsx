@@ -1,12 +1,20 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef, Dispatch, SetStateAction } from 'react';
 import type { Song } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import YouTube from 'react-youtube';
 
 type LoopMode = 'none' | 'playlist' | 'song';
+type PlaybackQuality = 'auto' | 'high' | 'standard' | 'low';
+
+// Define the shape of a single lyric line
+export type LyricLine = {
+  start: string;
+  dur: string;
+  text: string;
+};
 
 interface PlayerContextType {
   currentSong: Song | null;
@@ -14,11 +22,19 @@ interface PlayerContextType {
   playlist: Song[];
   listeningHistory: string[];
   isFullScreenPlayerOpen: boolean;
+  isQueueOpen: boolean;
   shuffle: boolean;
   loop: LoopMode;
+  lyrics: LyricLine[];
+  isLyricsLoading: boolean;
+  playbackQuality: PlaybackQuality;
   audioElement: HTMLAudioElement | null;
   youtubePlayer: any | null; // YouTube player instance
+  setLyrics: Dispatch<SetStateAction<LyricLine[]>>;
+  setIsLyricsLoading: Dispatch<SetStateAction<boolean>>;
+  setPlaybackQuality: Dispatch<SetStateAction<PlaybackQuality>>;
   toggleFullScreenPlayer: () => void;
+  toggleQueue: () => void;
   playSong: (song: Song, playlist?: Song[]) => void;
   togglePlay: () => void;
   playNext: () => void;
@@ -39,8 +55,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const [youtubePlayer, setYoutubePlayer] = useState<any | null>(null);
   const [isFullScreenPlayerOpen, setIsFullScreenPlayerOpen] = useState(false);
+  const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [shuffle, setShuffle] = useState(false);
   const [loop, setLoop] = useState<LoopMode>('none');
+  const [lyrics, setLyrics] = useState<LyricLine[]>([]);
+  const [isLyricsLoading, setIsLyricsLoading] = useState(false);
+  const [playbackQuality, setPlaybackQuality] = useState<PlaybackQuality>('auto');
   const { toast } = useToast();
 
   const currentSongRef = useRef(currentSong);
@@ -144,6 +164,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [loop, audioElement]);
 
   useEffect(() => {
+    if (youtubePlayer) {
+        let quality: string;
+        switch(playbackQuality) {
+            case 'high': quality = 'highres'; break;
+            case 'standard': quality = 'large'; break;
+            case 'low': quality = 'medium'; break;
+            default: quality = 'default';
+        }
+        youtubePlayer.setPlaybackQuality(quality);
+    }
+  }, [playbackQuality, youtubePlayer]);
+
+  useEffect(() => {
     if (currentSong?.isFromYouTube) {
         if (audioElement) audioElement.pause();
         if (youtubePlayer) {
@@ -208,7 +241,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, [currentSong]);
 
-  const toggleShuffle = () => {
+  const toggleQueue = useCallback(() => {
+    setIsQueueOpen(prev => !prev);
+  }, []);
+
+  const toggleShuffle = useCallback(() => {
     const newShuffleState = !shuffle;
     setShuffle(newShuffleState);
     if (newShuffleState) {
@@ -217,26 +254,27 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     } else {
         toast({ description: "Shuffle disabled" });
     }
-  };
+  }, [shuffle, playlist, toast]);
 
-  const toggleLoop = () => {
-    let newLoopMode: LoopMode;
-    let description = "";
-    
-    if (loop === 'none') {
-        newLoopMode = 'playlist';
-        description = "Looping playlist";
-    } else if (loop === 'playlist') {
-        newLoopMode = 'song';
-        description = "Looping song";
-    } else {
-        newLoopMode = 'none';
-        description = "Looping disabled";
-    }
-    
-    setLoop(newLoopMode);
-    toast({ description });
-  };
+  const toggleLoop = useCallback(() => {
+    setLoop(currentLoop => {
+        let newLoopMode: LoopMode;
+        let description = "";
+        
+        if (currentLoop === 'none') {
+            newLoopMode = 'playlist';
+            description = "Looping playlist";
+        } else if (currentLoop === 'playlist') {
+            newLoopMode = 'song';
+            description = "Looping song";
+        } else {
+            newLoopMode = 'none';
+            description = "Looping disabled";
+        }
+        toast({ description });
+        return newLoopMode;
+    });
+  }, [toast]);
   
   const onPlayerReady = (event: any) => {
     setYoutubePlayer(event.target);
@@ -263,10 +301,18 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     youtubePlayer,
     isFullScreenPlayerOpen,
     toggleFullScreenPlayer,
+    isQueueOpen,
+    toggleQueue,
     shuffle,
     loop,
     toggleShuffle,
     toggleLoop,
+    lyrics,
+    setLyrics,
+    isLyricsLoading,
+    setIsLyricsLoading,
+    playbackQuality,
+    setPlaybackQuality,
   };
 
   return (

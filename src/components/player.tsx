@@ -31,6 +31,7 @@ export function Player() {
     audioElement,
     youtubePlayer,
     toggleFullScreenPlayer,
+    toggleQueue,
   } = usePlayer();
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState("0:00");
@@ -196,8 +197,8 @@ export function Player() {
         </div>
 
         <div className="flex items-center justify-end gap-2 w-64">
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><Mic2 size={18}/></Button>
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><ListMusic size={18}/></Button>
+          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={toggleQueue}><Mic2 size={18}/></Button>
+          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={toggleQueue}><ListMusic size={18}/></Button>
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><Laptop2 size={18}/></Button>
           <div className="flex items-center gap-2 w-32">
             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><Volume2 size={18}/></Button>

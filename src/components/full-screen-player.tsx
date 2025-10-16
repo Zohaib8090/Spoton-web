@@ -8,11 +8,9 @@ import {
   Pause,
   SkipForward,
   SkipBack,
-  Heart,
   Mic2,
   ListMusic,
   Laptop2,
-  Volume2,
   ChevronDown,
   Shuffle,
   Repeat,
@@ -39,6 +37,7 @@ export function FullScreenPlayer() {
     toggleShuffle,
     loop,
     toggleLoop,
+    toggleQueue,
   } = usePlayer();
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState("0:00");
@@ -129,7 +128,7 @@ export function FullScreenPlayer() {
                 />
 
                 <div className="text-center">
-                    <h2 className="text-lg font-bold tracking-tight">{currentSong.title}</h2>
+                    <h2 className="text-base font-bold tracking-tight">{currentSong.title}</h2>
                     <p className="text-sm text-muted-foreground">{currentSong.artist}</p>
                 </div>
             </div>
@@ -191,7 +190,10 @@ export function FullScreenPlayer() {
 
                  <div className="flex items-center justify-between gap-2">
                     <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><Laptop2 size={18}/></Button>
-                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><ListMusic size={18}/></Button>
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="icon" onClick={toggleQueue} className="text-muted-foreground hover:text-foreground"><Mic2 size={18}/></Button>
+                        <Button variant="ghost" size="icon" onClick={toggleQueue} className="text-muted-foreground hover:text-foreground"><ListMusic size={18}/></Button>
+                    </div>
                 </div>
             </div>
 

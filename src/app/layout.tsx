@@ -5,6 +5,7 @@ import { PlayerProvider } from '@/context/player-context';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase';
 import { ThemeProvider } from '@/context/theme-provider';
+import { PlaybackQueue } from '@/components/playback-queue';
 
 export const metadata: Metadata = {
   title: 'spoton',
@@ -34,6 +35,7 @@ export default function RootLayout({
           >
             <PlayerProvider>
               <AppShell>{children}</AppShell>
+              <PlaybackQueue />
             </PlayerProvider>
             <Toaster />
           </ThemeProvider>

@@ -13,6 +13,7 @@ import {
   SidebarInset,
   SidebarGroup,
   SidebarTrigger,
+  SidebarRail,
 } from "@/components/ui/sidebar";
 import { Player } from "@/components/player";
 import { playlists } from "@/lib/data";
@@ -31,9 +32,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={false}>
       <div className="relative flex h-screen w-full overflow-hidden">
         <Sidebar>
+          <SidebarRail />
           <SidebarContent className="p-0">
             <div className="bg-card rounded-lg m-2 p-2">
               <div className="flex items-center gap-2 mb-2 px-2">
@@ -43,27 +45,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive('/')} className="hover:text-foreground">
-                    <Link href="/"><Home /> Home</Link>
+                    <Link href="/"><Home /> <span>Home</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive('/search')} className="hover:text-foreground">
-                    <Link href="/search"><Search /> Search</Link>
+                    <Link href="/search"><Search /> <span>Search</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive('/profile')} className="hover:text-foreground">
-                    <Link href="#"><User /> View Profile</Link>
+                    <Link href="#"><User /> <span>View Profile</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive('/whats-new')} className="hover:text-foreground">
-                    <Link href="#"><Bell /> What's new</Link>
+                    <Link href="#"><Bell /> <span>What's new</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive('/settings')} className="hover:text-foreground">
-                    <Link href="#"><Settings /> Settings</Link>
+                    <Link href="#"><Settings /> <span>Settings</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
@@ -73,7 +75,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <SidebarGroup>
                 <div className="flex justify-between items-center mb-2 px-2">
                   <SidebarMenuButton asChild className="hover:text-foreground">
-                    <Link href="#"><Library /> Your Library</Link>
+                    <Link href="#"><Library /> <span>Your Library</span></Link>
                   </SidebarMenuButton>
                   <Button variant="ghost" size="icon" className="h-8 w-8">
                     <Plus size={16}/>

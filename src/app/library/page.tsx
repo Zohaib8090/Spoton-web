@@ -74,7 +74,7 @@ export default function LibraryPage() {
     if (!files) return;
 
     const newSongs: Song[] = Array.from(files)
-      .filter(file => file.type.startsWith('audio/'))
+      .filter(file => file.type.startsWith('audio/') || file.type.startsWith('video/'))
       .map((file, index) => {
         const audioSrc = URL.createObjectURL(file);
         return {
@@ -91,8 +91,8 @@ export default function LibraryPage() {
 
     setLocalSongs(currentSongs => [...currentSongs, ...newSongs]);
     toast({
-        title: `${newSongs.length} song(s) added`,
-        description: "These songs are available for this session only.",
+        title: `${newSongs.length} file(s) added`,
+        description: "These files are available for this session only.",
     })
   };
 
@@ -163,14 +163,14 @@ export default function LibraryPage() {
                     ref={fileInputRef}
                     onChange={handleFileSelect}
                     multiple
-                    accept="audio/*"
+                    accept="audio/*,video/*"
                     className="hidden"
                 />
                 {localSongs.length === 0 ? (
                     <div className="text-center text-muted-foreground py-12 flex flex-col items-center gap-4">
                         <Music className="h-12 w-12" />
                         <h3 className="text-lg font-semibold">Play from your device</h3>
-                        <p className="max-w-md">Select local audio files to play them in the app. These files are only available for your current session and won&apos;t be saved.</p>
+                        <p className="max-w-md">Select local audio and video files to play them in the app. These files are only available for your current session and won&apos;t be saved.</p>
                         <Button onClick={handleSelectFilesClick}>
                             <FolderUp className="mr-2 h-4 w-4" />
                             Select Files

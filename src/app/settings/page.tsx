@@ -11,9 +11,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { BellRing } from 'lucide-react';
+import { BellRing, Video, Music } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Separator } from '@/components/ui/separator';
 
 export default function SettingsPage() {
   const { user, isUserLoading } = useUser();
@@ -37,7 +38,8 @@ export default function SettingsPage() {
     playlistUpdates: false,
   });
 
-  const [playbackQuality, setPlaybackQuality] = useState('standard');
+  const [audioQuality, setAudioQuality] = useState('standard');
+  const [videoQuality, setVideoQuality] = useState('standard');
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -47,7 +49,8 @@ export default function SettingsPage() {
       setNotificationPrefs(userData.settings.notifications);
     }
     if (userData?.settings?.playbackQuality) {
-      setPlaybackQuality(userData.settings.playbackQuality);
+      setAudioQuality(userData.settings.playbackQuality.audio || 'standard');
+      setVideoQuality(userData.settings.playbackQuality.video || 'standard');
     }
   }, [user, isUserLoading, router, userData]);
 
@@ -82,9 +85,14 @@ export default function SettingsPage() {
     updateSetting('notifications', newPrefs);
   };
   
-  const handlePlaybackQualityChange = (value: string) => {
-    setPlaybackQuality(value);
-    updateSetting('playbackQuality', value);
+  const handleAudioQualityChange = (value: string) => {
+    setAudioQuality(value);
+    updateSetting('playbackQuality', { audio: value, video: videoQuality });
+  };
+  
+  const handleVideoQualityChange = (value: string) => {
+    setVideoQuality(value);
+    updateSetting('playbackQuality', { audio: audioQuality, video: value });
   };
 
 
@@ -218,36 +226,76 @@ export default function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Playback</CardTitle>
-          <CardDescription>Adjust your audio streaming quality.</CardDescription>
+          <CardDescription>Adjust your streaming quality.</CardDescription>
         </CardHeader>
-        <CardContent>
-            <RadioGroup 
-              value={playbackQuality} 
-              onValueChange={handlePlaybackQualityChange} 
-              className="grid gap-4"
-            >
-              <Label className="flex items-center justify-between rounded-lg border p-4 cursor-pointer has-[:checked]:border-primary">
-                <div className="flex flex-col space-y-1">
-                    <span>High</span>
-                    <span className="font-normal leading-snug text-muted-foreground">Best audio quality, uses more data.</span>
+        <CardContent className="space-y-6">
+            <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                    <Music className="h-5 w-5 text-muted-foreground" />
+                    <h3 className="font-semibold">Audio Quality</h3>
                 </div>
-                <RadioGroupItem value="high" id="q-high" />
-              </Label>
-              <Label className="flex items-center justify-between rounded-lg border p-4 cursor-pointer has-[:checked]:border-primary">
-                 <div className="flex flex-col space-y-1">
-                    <span>Standard</span>
-                    <span className="font-normal leading-snug text-muted-foreground">Good balance of quality and data usage.</span>
+                <RadioGroup 
+                  value={audioQuality} 
+                  onValueChange={handleAudioQualityChange} 
+                  className="grid gap-4"
+                >
+                  <Label className="flex items-center justify-between rounded-lg border p-4 cursor-pointer has-[:checked]:border-primary">
+                    <div className="flex flex-col space-y-1">
+                        <span>High</span>
+                        <span className="font-normal leading-snug text-muted-foreground">Best audio quality, uses more data.</span>
+                    </div>
+                    <RadioGroupItem value="high" id="aq-high" />
+                  </Label>
+                  <Label className="flex items-center justify-between rounded-lg border p-4 cursor-pointer has-[:checked]:border-primary">
+                     <div className="flex flex-col space-y-1">
+                        <span>Standard</span>
+                        <span className="font-normal leading-snug text-muted-foreground">Good balance of quality and data usage.</span>
+                    </div>
+                    <RadioGroupItem value="standard" id="aq-standard" />
+                  </Label>
+                  <Label className="flex items-center justify-between rounded-lg border p-4 cursor-pointer has-[:checked]:border-primary">
+                    <div className="flex flex-col space-y-1">
+                        <span>Low</span>
+                        <span className="font-normal leading-snug text-muted-foreground">Saves data with slightly lower quality.</span>
+                    </div>
+                    <RadioGroupItem value="low" id="aq-low" />
+                  </Label>
+                </RadioGroup>
+            </div>
+            <Separator />
+            <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                    <Video className="h-5 w-5 text-muted-foreground" />
+                    <h3 className="font-semibold">Video Quality</h3>
                 </div>
-                <RadioGroupItem value="standard" id="q-standard" />
-              </Label>
-              <Label className="flex items-center justify-between rounded-lg border p-4 cursor-pointer has-[:checked]:border-primary">
-                <div className="flex flex-col space-y-1">
-                    <span>Low</span>
-                    <span className="font-normal leading-snug text-muted-foreground">Saves data with slightly lower quality.</span>
-                </div>
-                <RadioGroupItem value="low" id="q-low" />
-              </Label>
-            </RadioGroup>
+                <RadioGroup 
+                  value={videoQuality} 
+                  onValueChange={handleVideoQualityChange} 
+                  className="grid gap-4"
+                >
+                  <Label className="flex items-center justify-between rounded-lg border p-4 cursor-pointer has-[:checked]:border-primary">
+                    <div className="flex flex-col space-y-1">
+                        <span>High</span>
+                        <span className="font-normal leading-snug text-muted-foreground">Best video quality, uses more data.</span>
+                    </div>
+                    <RadioGroupItem value="high" id="vq-high" />
+                  </Label>
+                  <Label className="flex items-center justify-between rounded-lg border p-4 cursor-pointer has-[:checked]:border-primary">
+                     <div className="flex flex-col space-y-1">
+                        <span>Standard</span>
+                        <span className="font-normal leading-snug text-muted-foreground">Good balance of quality and data usage.</span>
+                    </div>
+                    <RadioGroupItem value="standard" id="vq-standard" />
+                  </Label>
+                  <Label className="flex items-center justify-between rounded-lg border p-4 cursor-pointer has-[:checked]:border-primary">
+                    <div className="flex flex-col space-y-1">
+                        <span>Low</span>
+                        <span className="font-normal leading-snug text-muted-foreground">Saves data with slightly lower quality.</span>
+                    </div>
+                    <RadioGroupItem value="low" id="vq-low" />
+                  </Label>
+                </RadioGroup>
+            </div>
         </CardContent>
       </Card>
 
@@ -275,5 +323,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-    

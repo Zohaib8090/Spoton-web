@@ -1,0 +1,100 @@
+/**
+ * @fileoverview Firestore Security Rules for HarmonyStream.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for user profiles and playlists.
+ * Tracks are treated as public read-only data.
+ *
+ * Data Structure:
+ * - /users/{userId}: Stores user profile information. Access is restricted to the user themselves.
+ * - /users/{userId}/playlists/{playlistId}: Stores playlists created by each user. Only the user can manage their own playlists.
+ * - /tracks/{trackId}: Stores track metadata. This collection is publicly readable, but only writeable by a process outside of the scope of security rules.
+ *
+ * Key Security Decisions:
+ * - Users can only access their own user document.
+ * - Users can only access playlists under their user document.
+ * - Tracks are publicly readable to allow for easy discovery and playback. Write operations are denied.
+ * - Listing of users is not allowed to prevent data scraping.
+ *
+ * Denormalization for Authorization:
+ * - Playlists are stored as subcollections under users to easily enforce ownership using path-based rules, avoiding costly `get()` calls.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Controls access to user profiles.  Users can only read and write their own profile.
+     * @path /users/{userId}
+     * @allow (create) - User with UID 'user123' can create their profile if request.auth.uid == 'user123'.
+     * @allow (get) - User with UID 'user123' can read their profile if request.auth.uid == 'user123'.
+     * @allow (update) - User with UID 'user123' can update their profile if request.auth.uid == 'user123'.
+     * @allow (delete) - User with UID 'user123' can delete their profile if request.auth.uid == 'user123'.
+     * @deny (create) - User with UID 'user456' cannot create a profile with ID 'user123'.
+     * @deny (get) - User with UID 'user456' cannot read the profile of user with ID 'user123'.
+     * @deny (update) - User with UID 'user456' cannot update the profile of user with ID 'user123'.
+     * @deny (delete) - User with UID 'user456' cannot delete the profile of user with ID 'user123'.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId} {
+      // Allow the user to create their own document if the userId matches their auth.uid
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+      allow get: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isSignedIn() && isExistingOwner(userId);
+      allow list: if false; // Prevent listing of all users.
+    }
+
+    /**
+     * @description Controls access to playlists, which are subcollections of user profiles.
+     * @path /users/{userId}/playlists/{playlistId}
+     * @allow (create) - User with UID 'user123' can create a playlist under /users/user123/playlists/playlist1 if request.auth.uid == 'user123'.
+     * @allow (get) - User with UID 'user123' can read a playlist under /users/user123/playlists/playlist1 if request.auth.uid == 'user123'.
+     * @allow (update) - User with UID 'user123' can update a playlist under /users/user123/playlists/playlist1 if request.auth.uid == 'user123'.
+     * @allow (delete) - User with UID 'user123' can delete a playlist under /users/user123/playlists/playlist1 if request.auth.uid == 'user123'.
+     * @allow (list) - User with UID 'user123' can list playlists under /users/user123 if request.auth.uid == 'user123'.
+     * @deny (create) - User with UID 'user456' cannot create a playlist under /users/user123/playlists/playlist1.
+     * @deny (get) - User with UID 'user456' cannot read a playlist under /users/user123/playlists/playlist1.
+     * @deny (update) - User with UID 'user456' cannot update a playlist under /users/user123/playlists/playlist1.
+     * @deny (delete) - User with UID 'user456' cannot delete a playlist under /users/user123/playlists/playlist1.
+     * @principle Enforces document ownership for writes; allows owner-only listing.
+     */
+    match /users/{userId}/playlists/{playlistId} {
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.userId == userId;
+      allow get: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isSignedIn() && isExistingOwner(userId);
+      allow list: if isSignedIn() && isOwner(userId);
+    }
+
+    /**
+     * @description Controls access to track metadata. Tracks are publicly readable, but not writable through the client.
+     * @path /tracks/{trackId}
+     * @allow (get) - Any user (signed in or not) can retrieve track data.
+     * @allow (list) - Any user (signed in or not) can list track data.
+     * @deny (create) - No user can create track data via security rules.
+     * @deny (update) - No user can update track data via security rules.
+     * @deny (delete) - No user can delete track data via security rules.
+     * @principle Allows public read access for track discovery.
+     */
+    match /tracks/{trackId} {
+      allow get, list: if true;
+      allow create, update, delete: if false;
+    }
+  }
+
+  // Helper function to determine if the user is signed in.
+  function isSignedIn() {
+    return request.auth != null;
+  }
+
+  // Helper function to determine if the user is the owner of the resource.
+  function isOwner(userId) {
+    return request.auth.uid == userId;
+  }
+
+    // Helper function to determine if the user is the owner of the resource and the resource exists
+  function isExistingOwner(userId) {
+    return isOwner(userId) && resource != null;
+  }
+}

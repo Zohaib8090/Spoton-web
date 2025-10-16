@@ -1,0 +1,175 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the HarmonyStream application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user.",
+          "format": "email"
+        },
+        "username": {
+          "type": "string",
+          "description": "Username of the user."
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "username"
+      ]
+    },
+    "Playlist": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Playlist",
+      "type": "object",
+      "description": "Represents a playlist created by a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Playlist entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Playlist)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the playlist."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the playlist."
+        },
+        "trackIds": {
+          "type": "array",
+          "description": "References to Tracks. (Relationship: Playlist 1:N Track)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "name",
+        "trackIds"
+      ]
+    },
+    "Track": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Track",
+      "type": "object",
+      "description": "Represents a music track.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Track entity."
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the track."
+        },
+        "artist": {
+          "type": "string",
+          "description": "Artist of the track."
+        },
+        "album": {
+          "type": "string",
+          "description": "Album the track belongs to."
+        },
+        "streamingService": {
+          "type": "string",
+          "description": "The streaming service the track is from (e.g., YouTube Music)."
+        },
+        "streamingServiceId": {
+          "type": "string",
+          "description": "The track's ID on the streaming service."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL of the track's album art.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "artist",
+        "streamingService",
+        "streamingServiceId",
+        "imageUrl"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles. Uses path-based ownership for private user data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/playlists/{playlistId}",
+        "definition": {
+          "entityName": "Playlist",
+          "schema": {
+            "$ref": "#/backend/entities/Playlist"
+          },
+          "description": "Stores playlists created by each user. Uses hierarchical paths to establish ownership. Supports secure list operations based on the 'userId' parameter.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "playlistId",
+              "description": "The unique identifier of the playlist."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/tracks/{trackId}",
+        "definition": {
+          "entityName": "Track",
+          "schema": {
+            "$ref": "#/backend/entities/Track"
+          },
+          "description": "Stores track metadata.  Tracks are global and not user-owned.",
+          "params": [
+            {
+              "name": "trackId",
+              "description": "The unique identifier of the track."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to manage users, playlists, and tracks, with a focus on scalability and security. User data is stored in a dedicated collection, while playlists are stored within each user's document using a subcollection. Tracks are stored in a global collection, since Tracks are not owned by users.\n\nThis design prioritizes **Authorization Independence**. Specifically, there is no `get()` call in security rules.\n\nThe design supports the required QAPs:\n\n*   **Secure Lists:**  Path-based ownership (`/users/{userId}/playlists/{playlistId}`) enables secure list operations for playlists, as rules can easily filter based on `request.auth.uid == userId`.\n\n*   **DBAC:**  Roles are derived from `request.auth.uid` and path-based ownership, precluding the need for custom claims.\n"
+  }
+}

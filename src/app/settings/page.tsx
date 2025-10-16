@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { BellRing, Video, Music, Wifi, Signal, Youtube } from 'lucide-react';
+import { BellRing, Video, Music, Wifi, Signal, Youtube, Mail } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
@@ -394,6 +394,24 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Developer Support</CardTitle>
+          <CardDescription>
+            For any queries or support, please reach out to our developer.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4 rounded-lg border p-4">
+            <Mail className="h-5 w-5 text-muted-foreground" />
+            <a href="mailto:zohaibbaig144@gmail.com" className="text-sm font-medium text-primary hover:underline">
+              zohaibbaig144@gmail.com
+            </a>
+          </div>
+        </CardContent>
+      </Card>
+
     </div>
   );
 }

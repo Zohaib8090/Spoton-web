@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { BellRing, Video, Music } from 'lucide-react';
+import { BellRing, Video, Music, Wifi, Signal } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
@@ -38,8 +38,10 @@ export default function SettingsPage() {
     playlistUpdates: false,
   });
 
-  const [audioQuality, setAudioQuality] = useState('standard');
-  const [videoQuality, setVideoQuality] = useState('standard');
+  const [playbackQuality, setPlaybackQuality] = useState({
+    audio: { wifi: 'standard', cellular: 'standard' },
+    video: { wifi: 'standard', cellular: 'standard' }
+  });
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -49,8 +51,10 @@ export default function SettingsPage() {
       setNotificationPrefs(userData.settings.notifications);
     }
     if (userData?.settings?.playbackQuality) {
-      setAudioQuality(userData.settings.playbackQuality.audio || 'standard');
-      setVideoQuality(userData.settings.playbackQuality.video || 'standard');
+      setPlaybackQuality(prev => ({
+        audio: { ...prev.audio, ...userData.settings.playbackQuality.audio },
+        video: { ...prev.video, ...userData.settings.playbackQuality.video }
+      }));
     }
   }, [user, isUserLoading, router, userData]);
 
@@ -85,16 +89,21 @@ export default function SettingsPage() {
     updateSetting('notifications', newPrefs);
   };
   
-  const handleAudioQualityChange = (value: string) => {
-    setAudioQuality(value);
-    updateSetting('playbackQuality', { audio: value, video: videoQuality });
+  const handlePlaybackQualityChange = (
+    type: 'audio' | 'video',
+    connection: 'wifi' | 'cellular',
+    value: string
+  ) => {
+    const newQuality = {
+      ...playbackQuality,
+      [type]: {
+        ...playbackQuality[type],
+        [connection]: value,
+      },
+    };
+    setPlaybackQuality(newQuality);
+    updateSetting('playbackQuality', newQuality);
   };
-  
-  const handleVideoQualityChange = (value: string) => {
-    setVideoQuality(value);
-    updateSetting('playbackQuality', { audio: audioQuality, video: value });
-  };
-
 
   const handleNotificationPermission = async () => {
     if (!('Notification' in window)) {
@@ -234,33 +243,54 @@ export default function SettingsPage() {
                     <Music className="h-5 w-5 text-muted-foreground" />
                     <h3 className="font-semibold">Audio Quality</h3>
                 </div>
-                <RadioGroup 
-                  value={audioQuality} 
-                  onValueChange={handleAudioQualityChange} 
-                  className="grid gap-4"
-                >
-                  <Label className="flex items-center justify-between rounded-lg border p-4 cursor-pointer has-[:checked]:border-primary">
-                    <div className="flex flex-col space-y-1">
-                        <span>High</span>
-                        <span className="font-normal leading-snug text-muted-foreground">Best audio quality, uses more data.</span>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Wifi size={16}/>
+                      <span>Wi-Fi Streaming</span>
                     </div>
-                    <RadioGroupItem value="high" id="aq-high" />
-                  </Label>
-                  <Label className="flex items-center justify-between rounded-lg border p-4 cursor-pointer has-[:checked]:border-primary">
-                     <div className="flex flex-col space-y-1">
-                        <span>Standard</span>
-                        <span className="font-normal leading-snug text-muted-foreground">Good balance of quality and data usage.</span>
+                    <RadioGroup 
+                      value={playbackQuality.audio.wifi} 
+                      onValueChange={(value) => handlePlaybackQualityChange('audio', 'wifi', value)} 
+                    >
+                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
+                        High
+                        <RadioGroupItem value="high" id="aq-w-high" />
+                      </Label>
+                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
+                        Standard
+                        <RadioGroupItem value="standard" id="aq-w-standard" />
+                      </Label>
+                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
+                        Low
+                        <RadioGroupItem value="low" id="aq-w-low" />
+                      </Label>
+                    </RadioGroup>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Signal size={16}/>
+                      <span>Cellular Streaming</span>
                     </div>
-                    <RadioGroupItem value="standard" id="aq-standard" />
-                  </Label>
-                  <Label className="flex items-center justify-between rounded-lg border p-4 cursor-pointer has-[:checked]:border-primary">
-                    <div className="flex flex-col space-y-1">
-                        <span>Low</span>
-                        <span className="font-normal leading-snug text-muted-foreground">Saves data with slightly lower quality.</span>
-                    </div>
-                    <RadioGroupItem value="low" id="aq-low" />
-                  </Label>
-                </RadioGroup>
+                    <RadioGroup 
+                      value={playbackQuality.audio.cellular} 
+                      onValueChange={(value) => handlePlaybackQualityChange('audio', 'cellular', value)}
+                    >
+                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
+                        High
+                        <RadioGroupItem value="high" id="aq-c-high" />
+                      </Label>
+                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
+                        Standard
+                        <RadioGroupItem value="standard" id="aq-c-standard" />
+                      </Label>
+                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
+                        Low
+                        <RadioGroupItem value="low" id="aq-c-low" />
+                      </Label>
+                    </RadioGroup>
+                  </div>
+                </div>
             </div>
             <Separator />
             <div className="space-y-4">
@@ -268,33 +298,54 @@ export default function SettingsPage() {
                     <Video className="h-5 w-5 text-muted-foreground" />
                     <h3 className="font-semibold">Video Quality</h3>
                 </div>
-                <RadioGroup 
-                  value={videoQuality} 
-                  onValueChange={handleVideoQualityChange} 
-                  className="grid gap-4"
-                >
-                  <Label className="flex items-center justify-between rounded-lg border p-4 cursor-pointer has-[:checked]:border-primary">
-                    <div className="flex flex-col space-y-1">
-                        <span>High</span>
-                        <span className="font-normal leading-snug text-muted-foreground">Best video quality, uses more data.</span>
+                 <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Wifi size={16}/>
+                      <span>Wi-Fi Streaming</span>
                     </div>
-                    <RadioGroupItem value="high" id="vq-high" />
-                  </Label>
-                  <Label className="flex items-center justify-between rounded-lg border p-4 cursor-pointer has-[:checked]:border-primary">
-                     <div className="flex flex-col space-y-1">
-                        <span>Standard</span>
-                        <span className="font-normal leading-snug text-muted-foreground">Good balance of quality and data usage.</span>
+                    <RadioGroup 
+                      value={playbackQuality.video.wifi} 
+                      onValueChange={(value) => handlePlaybackQualityChange('video', 'wifi', value)}
+                    >
+                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
+                        High
+                        <RadioGroupItem value="high" id="vq-w-high" />
+                      </Label>
+                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
+                        Standard
+                        <RadioGroupItem value="standard" id="vq-w-standard" />
+                      </Label>
+                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
+                        Low
+                        <RadioGroupItem value="low" id="vq-w-low" />
+                      </Label>
+                    </RadioGroup>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Signal size={16}/>
+                      <span>Cellular Streaming</span>
                     </div>
-                    <RadioGroupItem value="standard" id="vq-standard" />
-                  </Label>
-                  <Label className="flex items-center justify-between rounded-lg border p-4 cursor-pointer has-[:checked]:border-primary">
-                    <div className="flex flex-col space-y-1">
-                        <span>Low</span>
-                        <span className="font-normal leading-snug text-muted-foreground">Saves data with slightly lower quality.</span>
-                    </div>
-                    <RadioGroupItem value="low" id="vq-low" />
-                  </Label>
-                </RadioGroup>
+                    <RadioGroup 
+                      value={playbackQuality.video.cellular} 
+                      onValueChange={(value) => handlePlaybackQualityChange('video', 'cellular', value)}
+                    >
+                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
+                        High
+                        <RadioGroupItem value="high" id="vq-c-high" />
+                      </Label>
+                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
+                        Standard
+                        <RadioGroupItem value="standard" id="vq-c-standard" />
+                      </Label>
+                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
+                        Low
+                        <RadioGroupItem value="low" id="vq-c-low" />
+                      </Label>
+                    </RadioGroup>
+                  </div>
+                </div>
             </div>
         </CardContent>
       </Card>

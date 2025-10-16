@@ -38,17 +38,37 @@
             },
             "playbackQuality": {
               "type": "object",
-              "description": "The user's preferred playback quality.",
+              "description": "The user's preferred playback quality for different connection types.",
               "properties": {
                 "audio": {
-                  "type": "string",
-                  "enum": ["low", "standard", "high"],
-                  "description": "The user's preferred audio playback quality."
+                  "type": "object",
+                  "properties": {
+                    "wifi": {
+                      "type": "string",
+                      "enum": ["low", "standard", "high"],
+                      "description": "Audio quality on Wi-Fi."
+                    },
+                    "cellular": {
+                      "type": "string",
+                      "enum": ["low", "standard", "high"],
+                      "description": "Audio quality on cellular."
+                    }
+                  }
                 },
                 "video": {
-                  "type": "string",
-                  "enum": ["low", "standard", "high"],
-                  "description": "The user's preferred video playback quality."
+                  "type": "object",
+                  "properties": {
+                    "wifi": {
+                      "type": "string",
+                      "enum": ["low", "standard", "high"],
+                      "description": "Video quality on Wi-Fi."
+                    },
+                    "cellular": {
+                      "type": "string",
+                      "enum": ["low", "standard", "high"],
+                      "description": "Video quality on cellular."
+                    }
+                  }
                 }
               }
             }

@@ -1,11 +1,17 @@
+"use client";
+
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { playlists, albums } from "@/lib/data";
 import { notFound } from "next/navigation";
 import type { Playlist, Album } from "@/lib/types";
 import { PlaylistContent } from "@/components/playlist-content";
-import { Clock } from "lucide-react";
+import { Clock, ChevronLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function PlaylistPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
+
   let content: Playlist | Album | undefined;
   let isPlaylist = true;
 
@@ -31,6 +37,11 @@ export default function PlaylistPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="space-y-6 pb-8">
+      <Button variant="ghost" onClick={() => router.back()} className="mb-4">
+        <ChevronLeft className="mr-2 h-4 w-4" />
+        Back
+      </Button>
+
       <div className="flex flex-col sm:flex-row items-center gap-6">
         <Image
           src={coverArt}

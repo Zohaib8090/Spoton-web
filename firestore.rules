@@ -1,100 +1,94 @@
 /**
- * @fileoverview Firestore Security Rules for HarmonyStream.
- *
- * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for user profiles and playlists.
- * Tracks are treated as public read-only data.
+ * @file Firestore Security Rules
+ * @description This ruleset enforces a strict user-ownership model for user profiles and playlists. Tracks are globally accessible.
  *
  * Data Structure:
- * - /users/{userId}: Stores user profile information. Access is restricted to the user themselves.
- * - /users/{userId}/playlists/{playlistId}: Stores playlists created by each user. Only the user can manage their own playlists.
- * - /tracks/{trackId}: Stores track metadata. This collection is publicly readable, but only writeable by a process outside of the scope of security rules.
+ * - /users/{userId}: Stores user profiles. Only the authenticated user can read/write their own profile.
+ * - /users/{userId}/playlists/{playlistId}: Stores playlists created by each user. Only the owning user can manage their playlists.
+ * - /tracks/{trackId}: Stores track metadata. Read access is public, and write access is currently disabled (requires further definition).
  *
  * Key Security Decisions:
- * - Users can only access their own user document.
- * - Users can only access playlists under their user document.
- * - Tracks are publicly readable to allow for easy discovery and playback. Write operations are denied.
- * - Listing of users is not allowed to prevent data scraping.
+ * - User listing is disallowed to protect privacy.
+ * - Public read access to tracks is allowed, but write access is restricted and requires further implementation based on application requirements.
  *
- * Denormalization for Authorization:
- * - Playlists are stored as subcollections under users to easily enforce ownership using path-based rules, avoiding costly `get()` calls.
+ * Authorization Independence:
+ * - The rules are designed to avoid using `get()` calls to other documents, which simplifies the rules and improves performance.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Controls access to user profiles.  Users can only read and write their own profile.
+     * @description Controls access to user profile documents.
      * @path /users/{userId}
-     * @allow (create) - User with UID 'user123' can create their profile if request.auth.uid == 'user123'.
-     * @allow (get) - User with UID 'user123' can read their profile if request.auth.uid == 'user123'.
-     * @allow (update) - User with UID 'user123' can update their profile if request.auth.uid == 'user123'.
-     * @allow (delete) - User with UID 'user123' can delete their profile if request.auth.uid == 'user123'.
-     * @deny (create) - User with UID 'user456' cannot create a profile with ID 'user123'.
-     * @deny (get) - User with UID 'user456' cannot read the profile of user with ID 'user123'.
-     * @deny (update) - User with UID 'user456' cannot update the profile of user with ID 'user123'.
-     * @deny (delete) - User with UID 'user456' cannot delete the profile of user with ID 'user123'.
-     * @principle Enforces document ownership for all operations.
+     * @allow (create, update, delete): Authenticated user can create, update, or delete their own profile.
+     * @deny (create, update, delete): Any other user attempts to create, update, or delete this profile.
+     * @allow (get): Authenticated user can get their own profile.
+     * @deny (get): Any other user attempts to get this profile.
+     * @allow (list): Listing users is forbidden.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
      */
     match /users/{userId} {
-      // Allow the user to create their own document if the userId matches their auth.uid
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+          return isSignedIn() && resource != null && request.auth.uid == userId;
+      }
+
       allow get: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isSignedIn() && isExistingOwner(userId);
-      allow list: if false; // Prevent listing of all users.
+      allow list: if false;
+
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Controls access to playlists, which are subcollections of user profiles.
+     * @description Controls access to playlists within a user's profile.
      * @path /users/{userId}/playlists/{playlistId}
-     * @allow (create) - User with UID 'user123' can create a playlist under /users/user123/playlists/playlist1 if request.auth.uid == 'user123'.
-     * @allow (get) - User with UID 'user123' can read a playlist under /users/user123/playlists/playlist1 if request.auth.uid == 'user123'.
-     * @allow (update) - User with UID 'user123' can update a playlist under /users/user123/playlists/playlist1 if request.auth.uid == 'user123'.
-     * @allow (delete) - User with UID 'user123' can delete a playlist under /users/user123/playlists/playlist1 if request.auth.uid == 'user123'.
-     * @allow (list) - User with UID 'user123' can list playlists under /users/user123 if request.auth.uid == 'user123'.
-     * @deny (create) - User with UID 'user456' cannot create a playlist under /users/user123/playlists/playlist1.
-     * @deny (get) - User with UID 'user456' cannot read a playlist under /users/user123/playlists/playlist1.
-     * @deny (update) - User with UID 'user456' cannot update a playlist under /users/user123/playlists/playlist1.
-     * @deny (delete) - User with UID 'user456' cannot delete a playlist under /users/user123/playlists/playlist1.
-     * @principle Enforces document ownership for writes; allows owner-only listing.
+     * @allow (create, update, delete): Authenticated user can create, update, or delete their own playlists.
+     * @deny (create, update, delete): Any other user attempts to create, update, or delete these playlists.
+     * @allow (get, list): Authenticated user can get and list their own playlists.
+     * @deny (get, list): Any other user attempts to get or list these playlists.
+     * @principle Enforces hierarchical ownership and path consistency.
      */
     match /users/{userId}/playlists/{playlistId} {
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.userId == userId;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+          return isSignedIn() && resource != null && request.auth.uid == userId;
+      }
+
       allow get: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-      allow delete: if isSignedIn() && isExistingOwner(userId);
       allow list: if isSignedIn() && isOwner(userId);
+
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Controls access to track metadata. Tracks are publicly readable, but not writable through the client.
+     * @description Controls access to track metadata.
      * @path /tracks/{trackId}
-     * @allow (get) - Any user (signed in or not) can retrieve track data.
-     * @allow (list) - Any user (signed in or not) can list track data.
-     * @deny (create) - No user can create track data via security rules.
-     * @deny (update) - No user can update track data via security rules.
-     * @deny (delete) - No user can delete track data via security rules.
-     * @principle Allows public read access for track discovery.
+     * @allow (get, list): All users can read track metadata.
+     * @deny (create, update, delete): No one can create, update, or delete track metadata without additional authorization.
+     * @principle Allows public read access but restricts write access.
      */
     match /tracks/{trackId} {
       allow get, list: if true;
       allow create, update, delete: if false;
     }
-  }
-
-  // Helper function to determine if the user is signed in.
-  function isSignedIn() {
-    return request.auth != null;
-  }
-
-  // Helper function to determine if the user is the owner of the resource.
-  function isOwner(userId) {
-    return request.auth.uid == userId;
-  }
-
-    // Helper function to determine if the user is the owner of the resource and the resource exists
-  function isExistingOwner(userId) {
-    return isOwner(userId) && resource != null;
   }
 }

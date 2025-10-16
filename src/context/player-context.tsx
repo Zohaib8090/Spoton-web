@@ -175,7 +175,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           filter.type = i === 0 ? 'lowshelf' : (i === BANDS.length - 1 ? 'highshelf' : 'peaking');
           filter.frequency.value = frequency;
           filter.gain.value = equaliserSettings[i];
-          filter.Q.value = 1.41;
+          filter.Q.value = 1.41; // Using a standard Q value
           return filter;
         });
       } else {
@@ -728,5 +728,3 @@ export function usePlayer(): PlayerContextType {
   }
   return context;
 }
-
-    

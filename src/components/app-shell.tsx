@@ -6,20 +6,17 @@ import { Home, Search, Library, Plus } from "lucide-react";
 import {
   SidebarProvider,
   Sidebar,
-  SidebarHeader,
   SidebarContent,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarInset,
-  SidebarSeparator,
   SidebarGroup,
-  SidebarGroupLabel,
 } from "@/components/ui/sidebar";
 import { Player } from "@/components/player";
-import { Logo } from "@/components/logo";
 import { playlists } from "@/lib/data";
-import { Button } from "./ui/button";
+import { Button } from "@/components/ui/button";
+import { HarmonyStreamLogo } from "@/components/harmony-stream-logo";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -34,7 +31,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="relative flex h-screen w-full overflow-hidden">
         <Sidebar>
           <SidebarContent className="p-0">
-            <div className="bg-card rounded-lg m-2 p-2 space-y-2">
+            <div className="bg-card rounded-lg m-2 p-2">
+              <div className="flex items-center gap-2 mb-2 px-2">
+                <HarmonyStreamLogo className="h-6 w-6 text-primary" />
+                <h1 className="text-lg font-bold">HarmonyStream</h1>
+              </div>
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive('/')} className="hover:text-foreground">
@@ -87,7 +88,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SidebarInset>
           <div className="flex flex-col h-full">
             <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-              <div className="absolute top-0 left-0 w-full h-[250px] bg-gradient-to-b from-primary/30 to-background -z-10" />
+              <div className="absolute top-0 left-0 w-full h-[250px] bg-gradient-to-b from-primary/40 to-background -z-10" />
               {children}
             </main>
             <Player />

@@ -5,7 +5,7 @@
  *
  * - generatePersonalizedRecommendations -  A function that takes a user's listening history as input and returns personalized music recommendations.
  * - PersonalizedRecommendationsInput - The input type for the generatePersonalizedRecommendations function.
- * - PersonalizedRecommendationsOutput - The output type for the generatePersonalizedRecommendations function.
+ * - PersonalizedRecommendationsOutput - The output type for the PersonalizedRecommendations function.
  */
 
 import {ai} from '@/ai/genkit';

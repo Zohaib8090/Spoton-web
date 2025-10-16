@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Search, Library, Plus } from "lucide-react";
+import { Home, Search, Library, Plus, User, Bell, Settings } from "lucide-react";
 import {
   SidebarProvider,
   Sidebar,
@@ -48,6 +48,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive('/search')} className="hover:text-foreground">
                     <Link href="/search"><Search /> Search</Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive('/profile')} className="hover:text-foreground">
+                    <Link href="#"><User /> View Profile</Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive('/whats-new')} className="hover:text-foreground">
+                    <Link href="#"><Bell /> What's new</Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive('/whats-new-2')} className="hover:text-foreground">
+                    <Link href="#"><Bell /> What's new</Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive('/settings')} className="hover:text-foreground">
+                    <Link href="#"><Settings /> Settings</Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>

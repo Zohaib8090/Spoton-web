@@ -172,7 +172,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [loop, audioElement]);
 
   useEffect(() => {
-    if (youtubePlayer) {
+    if (youtubePlayer && typeof youtubePlayer.getIframe === 'function' && youtubePlayer.getIframe()) {
         let quality: string;
         switch(playbackQuality) {
             case 'high': quality = 'highres'; break;

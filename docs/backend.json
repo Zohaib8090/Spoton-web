@@ -88,7 +88,7 @@
               "properties": {
                 "gaplessPlayback": { "type": "boolean" },
                 "automix": { "type": "boolean" },
-                "crossfade": { "type": "boolean" }
+                "crossfade": { "type": "number", "description": "Crossfade duration in seconds." }
               }
             }
           }

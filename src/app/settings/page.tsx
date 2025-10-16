@@ -16,6 +16,7 @@ import { BellRing, Video, Music, Wifi, Signal, Youtube, Mail, GitBranch } from '
 import { doc, setDoc } from 'firebase/firestore';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
+import { Slider } from '@/components/ui/slider';
 
 export default function SettingsPage() {
   const { user, isUserLoading } = useUser();
@@ -51,7 +52,7 @@ export default function SettingsPage() {
   const [trackTransitions, setTrackTransitions] = useState({
     gaplessPlayback: true,
     automix: false,
-    crossfade: false,
+    crossfade: 0,
   });
 
   useEffect(() => {
@@ -128,8 +129,14 @@ export default function SettingsPage() {
     updateSetting('playbackQuality', newQuality);
   };
 
-  const handleTrackTransitionChange = (pref: 'gaplessPlayback' | 'automix' | 'crossfade', value: boolean) => {
+  const handleTrackTransitionChange = (pref: 'gaplessPlayback' | 'automix', value: boolean) => {
     const newTransitions = { ...trackTransitions, [pref]: value };
+    setTrackTransitions(newTransitions);
+    updateSetting('trackTransitions', newTransitions);
+  };
+  
+  const handleCrossfadeChange = (value: number[]) => {
+    const newTransitions = { ...trackTransitions, crossfade: value[0] };
     setTrackTransitions(newTransitions);
     updateSetting('trackTransitions', newTransitions);
   };
@@ -417,17 +424,23 @@ export default function SettingsPage() {
                   onCheckedChange={(checked) => handleTrackTransitionChange('automix', checked)}
                 />
               </div>
-              <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
-                <Label htmlFor="crossfade" className="flex flex-col space-y-1">
-                  <span>Crossfade</span>
-                  <span className="font-normal leading-snug text-muted-foreground">
-                    Fade out the current song as the next one fades in.
-                  </span>
-                </Label>
-                <Switch 
-                  id="crossfade" 
-                  checked={trackTransitions.crossfade}
-                  onCheckedChange={(checked) => handleTrackTransitionChange('crossfade', checked)}
+              <div className="space-y-3 rounded-lg border p-4">
+                <div className="flex items-center justify-between">
+                    <Label htmlFor="crossfade" className="flex flex-col space-y-1">
+                    <span>Crossfade</span>
+                    <span className="font-normal leading-snug text-muted-foreground">
+                        Fade out the current song as the next one fades in.
+                    </span>
+                    </Label>
+                    <span className="text-sm font-bold w-12 text-right">{trackTransitions.crossfade}s</span>
+                </div>
+                <Slider
+                  id="crossfade"
+                  min={0}
+                  max={12}
+                  step={1}
+                  value={[trackTransitions.crossfade]}
+                  onValueChange={handleCrossfadeChange}
                 />
               </div>
             </div>
@@ -476,7 +489,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-    
-
-    

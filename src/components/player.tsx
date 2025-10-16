@@ -91,7 +91,7 @@ export function Player() {
           )}
         </div>
 
-        <div className="flex flex-col items-center justify-center gap-2 w-full max-w-2xl mx-auto">
+        <div className="flex flex-col items-center justify-center gap-1 w-full max-w-2xl mx-auto">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" disabled={!currentSong} className="text-muted-foreground hover:text-foreground">
               <Shuffle size={18} />

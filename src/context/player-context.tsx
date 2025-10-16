@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef } from 'react';
 import type { Song } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -27,6 +27,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [listeningHistory, setListeningHistory] = useState<string[]>([]);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const { toast } = useToast();
+  
+  const currentSongRef = useRef(currentSong);
+  useEffect(() => {
+    currentSongRef.current = currentSong;
+  }, [currentSong]);
 
   useEffect(() => {
     const audio = new Audio();
@@ -37,8 +42,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     return () => {
       audio.removeEventListener('ended', handleEnded);
-      if (currentSong?.audioSrc.startsWith('blob:')) {
-        URL.revokeObjectURL(currentSong.audioSrc);
+      // Use the ref here to get the latest value of currentSong in the cleanup function
+      if (currentSongRef.current?.audioSrc?.startsWith('blob:')) {
+        URL.revokeObjectURL(currentSongRef.current.audioSrc);
       }
       audio.pause();
     };
@@ -59,6 +65,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       } else {
         audioElement.pause();
       }
+    } else if (audioElement && !currentSong) {
+        audioElement.pause();
+        audioElement.src = '';
     }
   }, [currentSong, isPlaying, audioElement]);
 
@@ -71,7 +80,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     } else {
       setPlaylist([song]);
     }
-    if (!song.audioSrc.startsWith('blob:')) {
+    if (song.audioSrc && !song.audioSrc.startsWith('blob:')) {
         setListeningHistory(prev => [...new Set([`${song.title} - ${song.artist}`, ...prev])].slice(0, 20));
     }
     
@@ -108,7 +117,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const closePlayer = useCallback(() => {
     if (audioElement) {
         audioElement.pause();
-        if (currentSong?.audioSrc.startsWith('blob:')) {
+        if (currentSong?.audioSrc && currentSong.audioSrc.startsWith('blob:')) {
            URL.revokeObjectURL(currentSong.audioSrc);
         }
     }

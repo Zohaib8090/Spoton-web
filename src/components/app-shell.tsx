@@ -12,6 +12,7 @@ import {
   SidebarMenuButton,
   SidebarInset,
   SidebarGroup,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Player } from "@/components/player";
 import { playlists } from "@/lib/data";
@@ -57,11 +58,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive('/whats-new')} className="hover:text-foreground">
-                    <Link href="#"><Bell /> What's new</Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive('/whats-new-2')} className="hover:text-foreground">
                     <Link href="#"><Bell /> What's new</Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -113,7 +109,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <main className={cn("flex-1 overflow-y-auto p-4 md:p-6 lg:p-8", {
               "pb-28": currentSong,
             })}>
-              <div className="absolute top-0 left-0 w-full h-[250px] bg-gradient-to-b from-primary/40 to-background -z-10" />
+              <div className="flex items-center gap-4">
+                <SidebarTrigger className="md:hidden" />
+                <div className="absolute top-0 left-0 w-full h-[250px] bg-gradient-to-b from-primary/40 to-background -z-10" />
+              </div>
               {children}
             </main>
             {currentSong && <Player />}

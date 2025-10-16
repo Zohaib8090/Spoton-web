@@ -127,10 +127,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const nextSongTriggeredRef = useRef(false);
 
   const handleSongEnd = useCallback(() => {
-    if (trackTransitions.gaplessPlayback && !nextSongTriggeredRef.current) {
+    if (!nextSongTriggeredRef.current) {
         playNextRef.current();
     }
-  }, [trackTransitions.gaplessPlayback]);
+  }, []);
 
   useEffect(() => {
     const audio = new Audio();
@@ -140,10 +140,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     return () => {
       audio.removeEventListener('ended', handleSongEnd);
-      if (currentSongRef.current?.audioSrc?.startsWith('blob:')) {
-        URL.revokeObjectURL(currentSongRef.current.audioSrc);
-      }
-      audio.pause();
+      // We don't pause or revoke the object URL here to allow background playback
     };
   }, [handleSongEnd]);
 
@@ -415,8 +412,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
                 const currentIndex = activePlaylist.findIndex(s => s.id === currentSong.id);
                 const nextIndex = (currentIndex + 1) % activePlaylist.length;
                 if (currentIndex !== -1 && (nextIndex !== 0 || loop === 'playlist')) {
-                    playNextRef.current();
-                    nextSongTriggeredRef.current = true;
+                    if (trackTransitions.gaplessPlayback || trackTransitions.automix) {
+                        playNextRef.current();
+                        nextSongTriggeredRef.current = true;
+                    }
                 }
             }
         }
@@ -591,11 +590,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const onPlayerStateChange = (event: any) => {
     // 0 = ended
     if (event.data === 0) {
-      if (trackTransitions.gaplessPlayback) {
-          playNextRef.current();
-      } else {
-          handleSongEnd();
-      }
+        handleSongEnd();
     }
   };
   
@@ -696,3 +691,5 @@ export function usePlayer(): PlayerContextType {
   }
   return context;
 }
+
+    

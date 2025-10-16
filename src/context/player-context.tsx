@@ -364,6 +364,47 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     playNextRef.current = playNext;
   }, [playNext]);
 
+  const togglePlay = useCallback(() => {
+    if (currentSong) {
+      setIsPlaying(prev => !prev);
+    }
+  }, [currentSong]);
+
+  const playPrev = useCallback(() => {
+    const activePlaylist = shuffle ? shuffledPlaylist : playlist;
+    if (!currentSong || activePlaylist.length === 0) return;
+
+    const currentIndex = activePlaylist.findIndex(song => song.id === currentSong.id);
+    if (currentIndex !== -1) {
+      const prevIndex = (currentIndex - 1 + activePlaylist.length) % activePlaylist.length;
+      playSong(activePlaylist[prevIndex], playlist);
+    }
+  }, [currentSong, playlist, shuffledPlaylist, playSong, shuffle]);
+
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentSong?.title,
+        artist: currentSong?.artist,
+        album: currentSong?.album,
+        artwork: [
+          { src: currentSong?.albumArt || '', sizes: '512x512', type: 'image/png' },
+        ]
+      });
+  
+      navigator.mediaSession.setActionHandler('play', () => togglePlay());
+      navigator.mediaSession.setActionHandler('pause', () => togglePlay());
+      navigator.mediaSession.setActionHandler('previoustrack', () => playPrev());
+      navigator.mediaSession.setActionHandler('nexttrack', () => playNextRef.current());
+    }
+  }, [currentSong, togglePlay, playPrev, playNext]);
+
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    }
+  }, [isPlaying]);
+
   useEffect(() => {
     if (audioElement) {
       audioElement.loop = loop === 'song';
@@ -488,23 +529,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(progressInterval);
   }, [isPlaying, updateProgress]);
 
-
-  const togglePlay = useCallback(() => {
-    if (currentSong) {
-      setIsPlaying(prev => !prev);
-    }
-  }, [currentSong]);
-
-  const playPrev = useCallback(() => {
-    const activePlaylist = shuffle ? shuffledPlaylist : playlist;
-    if (!currentSong || activePlaylist.length === 0) return;
-
-    const currentIndex = activePlaylist.findIndex(song => song.id === currentSong.id);
-    if (currentIndex !== -1) {
-      const prevIndex = (currentIndex - 1 + activePlaylist.length) % activePlaylist.length;
-      playSong(activePlaylist[prevIndex], playlist);
-    }
-  }, [currentSong, playlist, shuffledPlaylist, playSong, shuffle]);
   
   const closePlayer = useCallback(() => {
     if (audioElement) audioElement.pause();

@@ -49,7 +49,7 @@ interface PlayerContextType {
   toggleShowVideo: () => void;
   toggleFullScreenPlayer: () => void;
   toggleQueue: () => void;
-  playSong: (song: Song, playlist?: Song[]) => void;
+  playSong: (song: Song, newPlaylist?: Song[], isAutoplay?: boolean) => void;
   togglePlay: () => void;
   playNext: () => void;
   playPrev: () => void;
@@ -81,6 +81,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const stereoPannerNodeRef = useRef<StereoPannerNode | null>(null);
+  const fadeIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
 
   const { user } = useUser();
   const firestore = useFirestore();
@@ -139,27 +141,41 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       }
       const audioContext = audioContextRef.current;
-      if (!audioSourceRef.current) {
-        audioSourceRef.current = audioContext.createMediaElementSource(audioElement);
+      if (!audioSourceRef.current || audioSourceRef.current.mediaElement !== audioElement) {
+          try {
+            audioSourceRef.current = audioContext.createMediaElementSource(audioElement);
+          } catch(e) {
+              // This can happen if the source is already connected.
+              return;
+          }
       }
-      if (!stereoPannerNodeRef.current) {
-         // A more robust way to create mono:
-        const splitter = audioContext.createChannelSplitter(2);
-        const merger = audioContext.createChannelMerger(1);
-        audioSourceRef.current.connect(splitter);
-        splitter.connect(merger, 0, 0);
-        splitter.connect(merger, 1, 0);
-        merger.connect(audioContext.destination);
+      
+      const splitter = audioContext.createChannelSplitter(2);
+      const merger = audioContext.createChannelMerger(1);
+      
+      try {
+        audioSourceRef.current.disconnect();
+      } catch (e) {
+        // Disconnecting a not-yet-connected node is fine.
+      }
+      
+      audioSourceRef.current.connect(splitter);
+      splitter.connect(merger, 0, 0); // connect left input to the merger
+      splitter.connect(merger, 1, 0); // connect right input to the merger as well
+      merger.connect(audioContext.destination);
 
-      }
     } else {
-      // Disconnect panner if it exists, to return to stereo
-      if (audioSourceRef.current && stereoPannerNodeRef.current && audioContextRef.current) {
-        audioSourceRef.current.disconnect(stereoPannerNodeRef.current);
-        audioSourceRef.current.connect(audioContextRef.current.destination);
+      if (audioSourceRef.current && audioContextRef.current) {
+        try {
+          audioSourceRef.current.disconnect();
+          audioSourceRef.current.connect(audioContextRef.current.destination);
+        } catch(e) {
+          // Errors can happen if connections are already in a certain state.
+        }
       }
     }
-  }, [listeningControls.monoAudio, audioElement]);
+  }, [listeningControls.monoAudio, audioElement, currentSong]);
+
 
   useEffect(() => {
     const updateConnectionType = () => {
@@ -182,11 +198,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const playSong = useCallback((song: Song, newPlaylist?: Song[]) => {
+  const playSong = useCallback((song: Song, newPlaylist?: Song[], isAutoplay: boolean = false) => {
     if (currentSong?.isFromYouTube && youtubePlayer) {
       youtubePlayer.stopVideo();
     } else if (audioElement) {
       audioElement.pause();
+    }
+    
+    if (fadeIntervalRef.current) {
+        clearInterval(fadeIntervalRef.current);
+        fadeIntervalRef.current = null;
     }
     
     setCurrentSong(song);
@@ -210,10 +231,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         setListeningHistory(prev => [...new Set([`${song.title} - ${song.artist}`, ...prev])].slice(0, 20));
     }
     
-    toast({
-      title: "Now Playing",
-      description: `${song.title} by ${song.artist}`,
-    });
+    if (!isAutoplay) {
+        toast({
+            title: "Now Playing",
+            description: `${song.title} by ${song.artist}`,
+        });
+    }
     
     nextSongTriggeredRef.current = false;
 
@@ -235,7 +258,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           audioSrc: `youtube:${ytResult.id}`,
           isFromYouTube: true,
         };
-        playSong(nextSong, [nextSong]);
+        playSong(nextSong, [nextSong], true);
       }
     } catch (e) {
       console.error("Failed to find and play song", e);
@@ -267,10 +290,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           playSong(activePlaylist[nextIndex], playlist);
         } else if (listeningControls.autoPlay) {
             // Autoplay logic
+            toast({ title: 'Autoplay', description: 'Playing a recommended song.' });
             try {
               const result = await generatePersonalizedRecommendations({ listeningHistory });
               if (result.recommendations.length > 0) {
                 await findAndPlaySong(result.recommendations[0]);
+              } else {
+                setIsPlaying(false);
               }
             } catch (error) {
               console.error("Failed to get recommendations for autoplay:", error);
@@ -283,7 +309,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       }
       playSong(activePlaylist[nextIndex], playlist);
     }
-  }, [currentSong, playlist, shuffledPlaylist, shuffle, loop, playSong, audioElement, youtubePlayer, listeningControls.autoPlay, listeningHistory]);
+  }, [currentSong, playlist, shuffledPlaylist, shuffle, loop, playSong, audioElement, youtubePlayer, listeningControls.autoPlay, listeningHistory, toast]);
 
   useEffect(() => {
     playNextRef.current = playNext;
@@ -313,13 +339,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [playbackQualitySettings, youtubePlayer, showVideo, connectionType]);
   
   useEffect(() => {
-    if (listeningControls.volumeNormalization) {
-        if (audioElement) audioElement.volume = 0.8;
-        if (youtubePlayer && youtubePlayer.setVolume) youtubePlayer.setVolume(80);
-    } else {
-        if (audioElement) audioElement.volume = 1;
-        if (youtubePlayer && youtubePlayer.setVolume) youtubePlayer.setVolume(100);
-    }
+    if (fadeIntervalRef.current) return;
+
+    const baseVolume = listeningControls.volumeNormalization ? 0.8 : 1;
+    if (audioElement) audioElement.volume = baseVolume;
+    if (youtubePlayer && youtubePlayer.setVolume) youtubePlayer.setVolume(baseVolume * 100);
+    
   }, [listeningControls.volumeNormalization, audioElement, youtubePlayer, currentSong]);
 
   const updateProgress = useCallback(() => {
@@ -327,10 +352,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     if (trackTransitions.automix && trackTransitions.crossfade > 0 && !currentSong.isFromYouTube) {
         const timeLeft = audioElement.duration - audioElement.currentTime;
+        const baseVolume = listeningControls.volumeNormalization ? 0.8 : 1;
 
         if (timeLeft <= trackTransitions.crossfade) {
-            const volume = timeLeft / trackTransitions.crossfade;
-            audioElement.volume = Math.max(0, volume * (listeningControls.volumeNormalization ? 0.8 : 1));
+            const volume = (timeLeft / trackTransitions.crossfade) * baseVolume;
+            audioElement.volume = Math.max(0, volume);
 
             if (!nextSongTriggeredRef.current) {
                 const activePlaylist = shuffle ? shuffledPlaylist : playlist;
@@ -358,14 +384,41 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     } else {
         if (youtubePlayer && youtubePlayer.stopVideo) youtubePlayer.stopVideo();
         if (audioElement && currentSong) {
-            if (audioElement.src !== currentSong.audioSrc) {
+            const isNewSong = audioElement.src !== currentSong.audioSrc;
+            if (isNewSong) {
                 if (audioElement.src.startsWith('blob:')) {
                     URL.revokeObjectURL(audioElement.src);
                 }
                 audioElement.src = currentSong.audioSrc;
             }
+
             if (isPlaying) {
-                audioElement.play().catch(e => console.error("Playback failed", e));
+                const playPromise = audioElement.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(e => console.error("Playback failed", e));
+                }
+
+                if (isNewSong && nextSongTriggeredRef.current && trackTransitions.automix && trackTransitions.crossfade > 0) {
+                   const baseVolume = listeningControls.volumeNormalization ? 0.8 : 1;
+                   audioElement.volume = 0;
+                   const fadeDuration = trackTransitions.crossfade * 1000;
+                   const steps = 50;
+                   const stepDuration = fadeDuration / steps;
+                   let currentStep = 0;
+
+                   if(fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
+                   
+                   fadeIntervalRef.current = setInterval(() => {
+                        if(currentStep < steps) {
+                            currentStep++;
+                            audioElement.volume = (currentStep / steps) * baseVolume;
+                        } else {
+                            if(fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
+                            fadeIntervalRef.current = null;
+                        }
+                   }, stepDuration);
+                }
+
             } else {
                 audioElement.pause();
             }
@@ -374,7 +427,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             audioElement.src = '';
         }
     }
-  }, [currentSong, isPlaying, audioElement, youtubePlayer]);
+  }, [currentSong, isPlaying, audioElement, youtubePlayer, trackTransitions.automix, trackTransitions.crossfade, listeningControls.volumeNormalization]);
 
   useEffect(() => {
     let progressInterval: NodeJS.Timeout;
@@ -523,7 +576,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       });
   };
 
-  const value = {
+  const value: PlayerContextType = {
     currentSong,
     isPlaying,
     playlist,

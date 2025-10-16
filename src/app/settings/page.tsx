@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useUser, useFirestore, useDoc, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
@@ -174,6 +175,14 @@ export default function SettingsPage() {
         return 'Enable browser notifications';
     }
   }
+  
+  const qualityOptions = [
+    { value: 'automatic', label: 'Automatic' },
+    { value: 'very-high', label: 'Very High' },
+    { value: 'high', label: 'High' },
+    { value: 'standard', label: 'Standard' },
+    { value: 'low', label: 'Low' },
+  ];
 
   return (
     <div className="space-y-8">
@@ -253,18 +262,12 @@ export default function SettingsPage() {
                       value={playbackQuality.audio.wifi} 
                       onValueChange={(value) => handlePlaybackQualityChange('audio', 'wifi', value)} 
                     >
-                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
-                        High
-                        <RadioGroupItem value="high" id="aq-w-high" />
-                      </Label>
-                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
-                        Standard
-                        <RadioGroupItem value="standard" id="aq-w-standard" />
-                      </Label>
-                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
-                        Low
-                        <RadioGroupItem value="low" id="aq-w-low" />
-                      </Label>
+                      {qualityOptions.map(option => (
+                        <Label key={`aq-w-${option.value}`} className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
+                          {option.label}
+                          <RadioGroupItem value={option.value} id={`aq-w-${option.value}`} />
+                        </Label>
+                      ))}
                     </RadioGroup>
                   </div>
                   <div className="space-y-3">
@@ -276,18 +279,12 @@ export default function SettingsPage() {
                       value={playbackQuality.audio.cellular} 
                       onValueChange={(value) => handlePlaybackQualityChange('audio', 'cellular', value)}
                     >
-                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
-                        High
-                        <RadioGroupItem value="high" id="aq-c-high" />
-                      </Label>
-                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
-                        Standard
-                        <RadioGroupItem value="standard" id="aq-c-standard" />
-                      </Label>
-                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
-                        Low
-                        <RadioGroupItem value="low" id="aq-c-low" />
-                      </Label>
+                      {qualityOptions.map(option => (
+                        <Label key={`aq-c-${option.value}`} className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
+                          {option.label}
+                          <RadioGroupItem value={option.value} id={`aq-c-${option.value}`} />
+                        </Label>
+                      ))}
                     </RadioGroup>
                   </div>
                 </div>
@@ -308,18 +305,12 @@ export default function SettingsPage() {
                       value={playbackQuality.video.wifi} 
                       onValueChange={(value) => handlePlaybackQualityChange('video', 'wifi', value)}
                     >
-                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
-                        High
-                        <RadioGroupItem value="high" id="vq-w-high" />
-                      </Label>
-                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
-                        Standard
-                        <RadioGroupItem value="standard" id="vq-w-standard" />
-                      </Label>
-                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
-                        Low
-                        <RadioGroupItem value="low" id="vq-w-low" />
-                      </Label>
+                      {qualityOptions.map(option => (
+                        <Label key={`vq-w-${option.value}`} className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
+                          {option.label}
+                          <RadioGroupItem value={option.value} id={`vq-w-${option.value}`} />
+                        </Label>
+                      ))}
                     </RadioGroup>
                   </div>
                   <div className="space-y-3">
@@ -331,18 +322,12 @@ export default function SettingsPage() {
                       value={playbackQuality.video.cellular} 
                       onValueChange={(value) => handlePlaybackQualityChange('video', 'cellular', value)}
                     >
-                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
-                        High
-                        <RadioGroupItem value="high" id="vq-c-high" />
-                      </Label>
-                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
-                        Standard
-                        <RadioGroupItem value="standard" id="vq-c-standard" />
-                      </Label>
-                      <Label className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
-                        Low
-                        <RadioGroupItem value="low" id="vq-c-low" />
-                      </Label>
+                      {qualityOptions.map(option => (
+                        <Label key={`vq-c-${option.value}`} className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
+                          {option.label}
+                          <RadioGroupItem value={option.value} id={`vq-c-${option.value}`} />
+                        </Label>
+                      ))}
                     </RadioGroup>
                   </div>
                 </div>

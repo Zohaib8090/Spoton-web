@@ -45,12 +45,12 @@
                   "properties": {
                     "wifi": {
                       "type": "string",
-                      "enum": ["low", "standard", "high"],
+                      "enum": ["automatic", "low", "standard", "high", "very-high"],
                       "description": "Audio quality on Wi-Fi."
                     },
                     "cellular": {
                       "type": "string",
-                      "enum": ["low", "standard", "high"],
+                      "enum": ["automatic", "low", "standard", "high", "very-high"],
                       "description": "Audio quality on cellular."
                     }
                   }
@@ -60,12 +60,12 @@
                   "properties": {
                     "wifi": {
                       "type": "string",
-                      "enum": ["low", "standard", "high"],
+                      "enum": ["automatic", "low", "standard", "high", "very-high"],
                       "description": "Video quality on Wi-Fi."
                     },
                     "cellular": {
                       "type": "string",
-                      "enum": ["low", "standard", "high"],
+                      "enum": ["automatic", "low", "standard", "high", "very-high"],
                       "description": "Video quality on cellular."
                     }
                   }

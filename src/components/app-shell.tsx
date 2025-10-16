@@ -18,7 +18,7 @@ import {
 import { Player } from "@/components/player";
 import { FullScreenPlayer } from "@/components/full-screen-player";
 import { Button } from "@/components/ui/button";
-import { HarmonyStreamLogo } from "@/components/harmony-stream-logo";
+import { SpotonLogo } from "@/components/spoton-logo";
 import { usePlayer } from "@/context/player-context";
 import { cn } from "@/lib/utils";
 import { useAuth, useUser } from "@/firebase";
@@ -60,8 +60,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <SidebarContent className="p-0">
             <div className="bg-card rounded-lg m-2 p-2">
               <div className="flex items-center gap-2 mb-2 px-2">
-                <HarmonyStreamLogo className="h-6 w-6 text-primary" />
-                <h1 className="text-lg font-bold">HarmonyStream</h1>
+                <SpotonLogo className="h-6 w-6 text-primary" />
+                <h1 className="text-lg font-bold">Spoton</h1>
               </div>
               <SidebarMenu>
                 <SidebarMenuItem>

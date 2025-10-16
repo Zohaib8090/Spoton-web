@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { updateProfile } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +15,7 @@ import { User as UserIcon } from 'lucide-react';
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
   const [displayName, setDisplayName] = useState('');
@@ -32,14 +34,23 @@ export default function ProfilePage() {
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !firestore) return;
 
     setIsUpdating(true);
     try {
+      // Update Auth profile
       await updateProfile(user, { 
         displayName: displayName || '',
         photoURL: photoURL || '' 
       });
+      
+      // Update Firestore document
+      const userDocRef = doc(firestore, 'users', user.uid);
+      await setDoc(userDocRef, { 
+        username: displayName,
+        photoURL: photoURL
+      }, { merge: true });
+
       toast({
         title: 'Profile Updated',
         description: 'Your profile has been successfully updated.',
@@ -81,7 +92,7 @@ export default function ProfilePage() {
         <Avatar className="h-24 w-24">
           <AvatarImage src={user.photoURL || undefined} alt={user.displayName || user.email || 'User'} />
           <AvatarFallback>
-            <UserIcon className="h-12 w-12 text-muted-foreground" />
+            {user.displayName ? user.displayName.charAt(0).toUpperCase() : <UserIcon className="h-12 w-12 text-muted-foreground" />}
           </AvatarFallback>
         </Avatar>
         <div>

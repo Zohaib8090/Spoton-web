@@ -23,4 +23,5 @@ export interface Playlist {
   description?: string;
   songs: Song[];
   coverArt: string;
+  userId?: string;
 }

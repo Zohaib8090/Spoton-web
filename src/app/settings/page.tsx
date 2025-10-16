@@ -1,9 +1,9 @@
 "use client";
 
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { useTheme } from "next-themes"
+import { useEffect, useState, useCallback } from 'react';
+import { useTheme } from "next-themes";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -11,21 +11,64 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { BellRing } from 'lucide-react';
+import { doc, setDoc } from 'firebase/firestore';
 
 export default function SettingsPage() {
   const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const router = useRouter();
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme } = useTheme();
   const { toast } = useToast();
+  
+  const userDocRef = useMemoFirebase(() => 
+    user && firestore ? doc(firestore, 'users', user.uid) : null,
+    [user, firestore]
+  );
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+
   const [notificationPermission, setNotificationPermission] = useState(
     typeof window !== 'undefined' ? Notification.permission : 'default'
   );
+  
+  const [notificationPrefs, setNotificationPrefs] = useState({
+    newReleases: true,
+    playlistUpdates: false,
+  });
 
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
     }
-  }, [user, isUserLoading, router]);
+    if (userData?.settings?.notifications) {
+      setNotificationPrefs(userData.settings.notifications);
+    }
+  }, [user, isUserLoading, router, userData]);
+
+  const updateSetting = useCallback(async (key: string, value: any) => {
+    if (!userDocRef) return;
+    try {
+      await setDoc(userDocRef, { settings: { [key]: value } }, { merge: true });
+    } catch (error) {
+      console.error("Failed to update settings:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save your settings.",
+      });
+    }
+  }, [userDocRef, toast]);
+  
+  const handleThemeChange = (isDarkMode: boolean) => {
+    const newTheme = isDarkMode ? 'dark' : 'light';
+    setTheme(newTheme);
+    updateSetting('theme', newTheme);
+  };
+
+  const handleNotificationPrefChange = (pref: 'newReleases' | 'playlistUpdates', value: boolean) => {
+    const newPrefs = { ...notificationPrefs, [pref]: value };
+    setNotificationPrefs(newPrefs);
+    updateSetting('notifications', newPrefs);
+  };
 
   const handleNotificationPermission = async () => {
     if (!('Notification' in window)) {
@@ -53,11 +96,6 @@ export default function SettingsPage() {
         title: "Notifications Enabled!",
         description: "You will now receive notifications from Spoton.",
       });
-      // You can now send notifications
-      new Notification("Welcome to Spoton!", {
-        body: "You're all set to receive updates.",
-        icon: "/spoton-logo.svg",
-      });
     } else {
       toast({
         variant: "destructive",
@@ -67,20 +105,25 @@ export default function SettingsPage() {
     }
   };
 
-
-  if (isUserLoading || !user) {
+  if (isUserLoading || !user || isUserDataLoading) {
     return (
       <div className="space-y-8">
         <Skeleton className="h-8 w-48" />
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <Skeleton className="h-6 w-1/2" />
-            <Skeleton className="h-6 w-12" />
-          </div>
-          <div className="flex items-center justify-between">
-            <Skeleton className="h-6 w-1/2" />
-            <Skeleton className="h-6 w-12" />
-          </div>
+          {[...Array(2)].map((_, i) => (
+             <Card key={i}>
+                <CardHeader><Skeleton className="h-6 w-1/3" /></CardHeader>
+                <CardContent>
+                    <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+                        <div className="space-y-2">
+                           <Skeleton className="h-5 w-24" />
+                           <Skeleton className="h-4 w-48" />
+                        </div>
+                        <Skeleton className="h-6 w-12 rounded-full" />
+                    </div>
+                </CardContent>
+             </Card>
+          ))}
         </div>
       </div>
     );
@@ -96,7 +139,6 @@ export default function SettingsPage() {
         return 'Enable browser notifications';
     }
   }
-
 
   return (
     <div className="space-y-8">
@@ -131,7 +173,12 @@ export default function SettingsPage() {
                 Get notified about new music from artists you follow.
               </span>
             </Label>
-            <Switch id="new-releases" defaultChecked disabled={notificationPermission !== 'granted'} />
+            <Switch 
+              id="new-releases" 
+              checked={notificationPrefs.newReleases}
+              onCheckedChange={(checked) => handleNotificationPrefChange('newReleases', checked)}
+              disabled={notificationPermission !== 'granted'} 
+            />
           </div>
           <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
             <Label htmlFor="playlist-updates" className="flex flex-col space-y-1">
@@ -140,7 +187,12 @@ export default function SettingsPage() {
                 Get notified when playlists you follow are updated.
               </span>
             </Label>
-            <Switch id="playlist-updates" disabled={notificationPermission !== 'granted'} />
+            <Switch 
+              id="playlist-updates" 
+              checked={notificationPrefs.playlistUpdates}
+              onCheckedChange={(checked) => handleNotificationPrefChange('playlistUpdates', checked)}
+              disabled={notificationPermission !== 'granted'} 
+            />
           </div>
         </CardContent>
       </Card>
@@ -161,7 +213,7 @@ export default function SettingsPage() {
             <Switch
               id="dark-mode"
               checked={theme === 'dark'}
-              onCheckedChange={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              onCheckedChange={handleThemeChange}
             />
           </div>
         </CardContent>

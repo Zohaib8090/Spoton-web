@@ -18,6 +18,24 @@
         "username": {
           "type": "string",
           "description": "Username of the user."
+        },
+        "settings": {
+          "type": "object",
+          "description": "User-specific settings.",
+          "properties": {
+            "theme": {
+              "type": "string",
+              "enum": ["light", "dark", "system"],
+              "description": "The user's preferred theme."
+            },
+            "notifications": {
+              "type": "object",
+              "properties": {
+                "newReleases": { "type": "boolean" },
+                "playlistUpdates": { "type": "boolean" }
+              }
+            }
+          }
         }
       },
       "required": [
@@ -54,13 +72,16 @@
           "items": {
             "type": "string"
           }
+        },
+        "coverArt": {
+            "type": "string",
+            "format": "uri"
         }
       },
       "required": [
         "id",
         "userId",
-        "name",
-        "trackIds"
+        "name"
       ]
     },
     "Track": {

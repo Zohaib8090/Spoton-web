@@ -10,12 +10,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/firebase';
-import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { useAuth, useFirestore } from '@/firebase';
+import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, updateProfile } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import { SpotonLogo } from '@/components/spoton-logo';
 import { FcGoogle } from 'react-icons/fc';
 
 const signupSchema = z.object({
+  username: z.string().min(3, { message: 'Username must be at least 3 characters.'}),
   email: z.string().email({ message: 'Invalid email address.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
 });
@@ -25,6 +27,7 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -36,10 +39,32 @@ export default function SignupPage() {
     resolver: zodResolver(signupSchema),
   });
 
+  const createUserDocument = async (user: any, username?: string) => {
+      if (!firestore) return;
+      const userDocRef = doc(firestore, "users", user.uid);
+      const userData = {
+        id: user.uid,
+        email: user.email,
+        username: username || user.displayName || user.email?.split('@')[0],
+        photoURL: user.photoURL,
+        settings: {
+          theme: 'dark',
+          notifications: {
+            newReleases: true,
+            playlistUpdates: true,
+          }
+        }
+      };
+      await setDoc(userDocRef, userData);
+  }
+
   const onSubmit = async (data: SignupFormValues) => {
     setIsLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, data.email, data.password);
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      await updateProfile(userCredential.user, { displayName: data.username });
+      await createUserDocument(userCredential.user, data.username);
+      
       toast({ title: 'Account created successfully!' });
       router.push('/');
     } catch (error: any) {
@@ -57,7 +82,8 @@ export default function SignupPage() {
     setIsLoading(true);
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      await createUserDocument(result.user);
       toast({ title: 'Account created successfully!' });
       router.push('/');
     } catch (error: any) {
@@ -98,6 +124,17 @@ export default function SignupPage() {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+           <div className="space-y-2">
+            <Label htmlFor="username">Username</Label>
+            <Input
+              id="username"
+              type="text"
+              placeholder="Your username"
+              {...register('username')}
+              disabled={isLoading}
+            />
+            {errors.username && <p className="text-sm text-destructive">{errors.username.message}</p>}
+          </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input

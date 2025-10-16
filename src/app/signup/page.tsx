@@ -52,8 +52,8 @@ export default function SignupPage() {
         settings: {
           theme: 'dark',
           playbackQuality: {
-            audio: { wifi: 'standard', cellular: 'standard' },
-            video: { wifi: 'standard', cellular: 'standard' },
+            audio: { wifi: 'automatic', cellular: 'automatic' },
+            video: { wifi: 'automatic', cellular: 'automatic' },
           },
           notifications: {
             newReleases: true,

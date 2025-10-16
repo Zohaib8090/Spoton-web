@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef, Dispatch, SetStateAction } from 'react';
@@ -10,6 +9,8 @@ import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useDoc, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { generatePersonalizedRecommendations } from '@/ai/flows/personalized-recommendations';
+import { searchYoutube } from '@/ai/flows/youtube-search';
 
 type LoopMode = 'none' | 'playlist' | 'song';
 export type Quality = 'automatic' | 'high' | 'standard' | 'low' | 'very-high';
@@ -90,6 +91,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   };
   
   const volumeNormalization = userData?.settings?.listeningControls?.volumeNormalization ?? true;
+  const autoPlay = userData?.settings?.listeningControls?.autoPlay ?? true;
 
 
   const { toast } = useToast();
@@ -174,7 +176,30 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     });
   }, [toast, shuffle, playlist, audioElement, youtubePlayer, currentSong]);
 
-  const playNext = useCallback(() => {
+  const findAndPlaySong = async (query: string) => {
+    try {
+      const searchRes = await searchYoutube({ query });
+      if (searchRes.results.length > 0) {
+        const ytResult = searchRes.results[0];
+        const nextSong: Song = {
+          id: ytResult.id,
+          title: ytResult.title,
+          artist: ytResult.artist,
+          album: "YouTube",
+          albumId: "youtube",
+          albumArt: ytResult.thumbnail,
+          duration: ytResult.duration,
+          audioSrc: `youtube:${ytResult.id}`,
+          isFromYouTube: true,
+        };
+        playSong(nextSong, [nextSong]);
+      }
+    } catch (e) {
+      console.error("Failed to find and play song", e);
+    }
+  };
+
+  const playNext = useCallback(async () => {
     const activePlaylist = shuffle ? shuffledPlaylist : playlist;
     if (!currentSong || activePlaylist.length === 0) return;
 
@@ -196,14 +221,26 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       if (nextIndex >= activePlaylist.length) {
         if (loop === 'playlist') {
           nextIndex = 0;
+          playSong(activePlaylist[nextIndex], playlist);
+        } else if (autoPlay) {
+            // Autoplay logic
+            try {
+              const result = await generatePersonalizedRecommendations({ listeningHistory });
+              if (result.recommendations.length > 0) {
+                await findAndPlaySong(result.recommendations[0]);
+              }
+            } catch (error) {
+              console.error("Failed to get recommendations for autoplay:", error);
+              setIsPlaying(false);
+            }
         } else {
           setIsPlaying(false);
-          return; 
         }
+        return; 
       }
       playSong(activePlaylist[nextIndex], playlist);
     }
-  }, [currentSong, playlist, shuffledPlaylist, shuffle, loop, playSong, audioElement, youtubePlayer]);
+  }, [currentSong, playlist, shuffledPlaylist, shuffle, loop, playSong, audioElement, youtubePlayer, autoPlay, listeningHistory]);
 
   useEffect(() => {
     playNextRef.current = playNext;
@@ -472,7 +509,5 @@ export function usePlayer(): PlayerContextType {
   }
   return context;
 }
-
-    
 
     

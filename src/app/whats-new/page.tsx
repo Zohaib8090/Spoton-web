@@ -7,7 +7,7 @@ import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Rocket, Sparkles } from 'lucide-react';
+import { Rocket, Sparkles, Moon } from 'lucide-react';
 
 export default function WhatsNewPage() {
   const { user, isUserLoading } = useUser();
@@ -20,10 +20,10 @@ export default function WhatsNewPage() {
     }
   }, [user, isUserLoading, router]);
 
-  const sendUpdateNotification = () => {
+  const sendUpdateNotification = (title: string, body: string) => {
     if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('Spoton Updates!', {
-        body: 'A new feature has just been released. Check it out!',
+      new Notification(title, {
+        body: body,
         icon: '/spoton-logo.svg',
       });
     } else {
@@ -42,6 +42,24 @@ export default function WhatsNewPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
+            <Moon className="h-6 w-6" />
+            <span>Dark Theme is Here!</span>
+          </CardTitle>
+          <CardDescription>July 2, 2024</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p>You can now enjoy Spoton in a beautiful new dark theme. Perfect for late-night listening sessions!</p>
+          <p>Go to the <a href="/settings" className="underline text-primary">Settings</a> page to switch between light and dark modes.</p>
+           <Button onClick={() => sendUpdateNotification('Dark Theme Added!', 'You can now enable dark mode in settings.')}>
+            <Sparkles className="mr-2 h-4 w-4" />
+            Notify me about this update
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
             <Rocket className="h-6 w-6" />
             <span>App Version 1.1 Released!</span>
           </CardTitle>
@@ -54,18 +72,15 @@ export default function WhatsNewPage() {
               <strong>AI Recommendations:</strong> Get personalized song suggestions based on your listening history on the home page.
             </li>
             <li>
-              <strong>Dark Mode:</strong> You can now switch between light and dark themes in the settings page.
-            </li>
-            <li>
               <strong>Notification Settings:</strong> Control how you receive updates from us.
             </li>
              <li>
               <strong>UI Enhancements:</strong> We've polished the interface for a smoother experience.
             </li>
           </ul>
-           <Button onClick={sendUpdateNotification}>
+           <Button onClick={() => sendUpdateNotification('Spoton Updates!', 'A new feature has just been released. Check it out!')}>
             <Sparkles className="mr-2 h-4 w-4" />
-            Send me a notification for this update
+            Notify me about this update
           </Button>
         </CardContent>
       </Card>

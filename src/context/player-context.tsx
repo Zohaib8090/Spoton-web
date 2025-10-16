@@ -185,31 +185,29 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [currentSong]);
 
   const toggleShuffle = useCallback(() => {
-    setShuffle(current => {
-        const newShuffleState = !current;
-        if(newShuffleState) {
-            setShuffledPlaylist([...playlist].sort(() => Math.random() - 0.5));
-            toast({ description: "Shuffle enabled" });
-        } else {
-            toast({ description: "Shuffle disabled" });
-        }
-        return newShuffleState;
-    });
-  }, [playlist, toast]);
+    const newShuffleState = !shuffle;
+    setShuffle(newShuffleState);
+    if (newShuffleState) {
+        setShuffledPlaylist([...playlist].sort(() => Math.random() - 0.5));
+        toast({ description: "Shuffle enabled" });
+    } else {
+        toast({ description: "Shuffle disabled" });
+    }
+  }, [shuffle, playlist, toast]);
 
   const toggleLoop = useCallback(() => {
     setLoop(current => {
-        if (current === 'none') {
-            toast({ description: "Looping playlist" });
-            return 'playlist';
-        }
-        if (current === 'playlist') {
-            toast({ description: "Looping song" });
-            return 'song';
-        }
-        toast({ description: "Looping disabled" });
-        return 'none';
-    })
+      if (current === 'none') {
+        toast({ description: "Looping playlist" });
+        return 'playlist';
+      }
+      if (current === 'playlist') {
+        toast({ description: "Looping song" });
+        return 'song';
+      }
+      toast({ description: "Looping disabled" });
+      return 'none';
+    });
   }, [toast]);
 
 

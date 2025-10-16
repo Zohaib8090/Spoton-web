@@ -40,7 +40,7 @@ export default function SettingsPage() {
   });
 
   const [playbackQuality, setPlaybackQuality] = useState({
-    audio: { wifi: 'standard', cellular: 'standard' },
+    audio: { wifi: 'automatic', cellular: 'automatic' },
     video: { wifi: 'standard', cellular: 'standard' }
   });
   
@@ -394,7 +394,7 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
-
+      
       <Card>
         <CardHeader>
           <CardTitle>Developer Support</CardTitle>
@@ -415,5 +415,7 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    
 
     

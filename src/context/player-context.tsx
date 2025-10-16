@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef, Dispatch, SetStateAction } from 'react';
@@ -6,9 +7,17 @@ import type { Song } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import YouTube from 'react-youtube';
 import { cn } from '@/lib/utils';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 type LoopMode = 'none' | 'playlist' | 'song';
-type PlaybackQuality = 'auto' | 'high' | 'standard' | 'low';
+export type Quality = 'automatic' | 'high' | 'standard' | 'low' | 'very-high';
+export type ConnectionType = 'wifi' | 'cellular' | 'unknown';
+export type PlaybackQualitySettings = {
+    audio: Record<'wifi' | 'cellular', Quality>;
+    video: Record<'wifi' | 'cellular', Quality>;
+};
+
 
 // Define the shape of a single lyric line
 export type LyricLine = {
@@ -28,13 +37,11 @@ interface PlayerContextType {
   loop: LoopMode;
   lyrics: LyricLine[];
   isLyricsLoading: boolean;
-  playbackQuality: PlaybackQuality;
   showVideo: boolean;
   audioElement: HTMLAudioElement | null;
   youtubePlayer: any | null; // YouTube player instance
   setLyrics: Dispatch<SetStateAction<LyricLine[]>>;
   setIsLyricsLoading: Dispatch<SetStateAction<boolean>>;
-  setPlaybackQuality: Dispatch<SetStateAction<PlaybackQuality>>;
   setYoutubePlayer: Dispatch<SetStateAction<any | null>>;
   setCurrentTime: Dispatch<SetStateAction<number>>;
   toggleShowVideo: () => void;
@@ -65,9 +72,20 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [loop, setLoop] = useState<LoopMode>('none');
   const [lyrics, setLyrics] = useState<LyricLine[]>([]);
   const [isLyricsLoading, setIsLyricsLoading] = useState(false);
-  const [playbackQuality, setPlaybackQuality] = useState<PlaybackQuality>('auto');
   const [showVideo, setShowVideo] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const userDocRef = useMemoFirebase(() => user && firestore ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
+  const { data: userData } = useDoc(userDocRef);
+
+  const [connectionType, setConnectionType] = useState<ConnectionType>('unknown');
+  
+  const playbackQualitySettings: PlaybackQualitySettings = userData?.settings?.playbackQuality || {
+    audio: { wifi: 'automatic', cellular: 'standard' },
+    video: { wifi: 'standard', cellular: 'standard' },
+  };
 
   const { toast } = useToast();
 
@@ -95,6 +113,27 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       audio.pause();
     };
   }, [handleSongEnd]);
+
+  useEffect(() => {
+    const updateConnectionType = () => {
+      if ('connection' in navigator) {
+        const connection = (navigator as any).connection;
+        if (connection.type === 'wifi') {
+          setConnectionType('wifi');
+        } else if (connection.type === 'cellular') {
+          setConnectionType('cellular');
+        } else {
+          setConnectionType('unknown');
+        }
+      }
+    };
+    updateConnectionType();
+    if ('connection' in navigator) {
+        const connection = (navigator as any).connection;
+        connection.addEventListener('change', updateConnectionType);
+        return () => connection.removeEventListener('change', updateConnectionType);
+    }
+  }, []);
 
   const playSong = useCallback((song: Song, newPlaylist?: Song[]) => {
     if (currentSong?.isFromYouTube && youtubePlayer) {
@@ -173,16 +212,20 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (youtubePlayer && typeof youtubePlayer.getIframe === 'function' && youtubePlayer.getIframe()) {
-        let quality: string;
-        switch(playbackQuality) {
-            case 'high': quality = 'highres'; break;
-            case 'standard': quality = 'large'; break;
-            case 'low': quality = 'medium'; break;
-            default: quality = 'default';
-        }
-        youtubePlayer.setPlaybackQuality(quality);
+      const isVideo = showVideo; // or some other logic to determine if it's video
+      const qualitySetting = isVideo ? playbackQualitySettings.video[connectionType] : playbackQualitySettings.audio[connectionType];
+      
+      let quality: string;
+      switch(qualitySetting) {
+          case 'very-high': quality = 'highres'; break;
+          case 'high': quality = 'hd1080'; break;
+          case 'standard': quality = 'hd720'; break;
+          case 'low': quality = 'large'; break;
+          default: quality = 'default';
+      }
+      youtubePlayer.setPlaybackQuality(quality);
     }
-  }, [playbackQuality, youtubePlayer]);
+  }, [playbackQualitySettings, youtubePlayer, showVideo, connectionType]);
 
   useEffect(() => {
     if (currentSong?.isFromYouTube) {
@@ -344,8 +387,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setLyrics,
     isLyricsLoading,
     setIsLyricsLoading,
-    playbackQuality,
-    setPlaybackQuality,
     showVideo,
     toggleShowVideo,
     setYoutubePlayer,
@@ -381,3 +422,5 @@ export function usePlayer(): PlayerContextType {
   }
   return context;
 }
+
+    

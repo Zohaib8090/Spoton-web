@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useRef, useMemo } from 'react';
@@ -7,8 +8,6 @@ import { usePlayer } from '@/context/player-context';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { getYoutubeLyrics } from '@/ai/flows/youtube-lyrics';
 import type { YoutubeLyricsOutput } from '@/ai/flows/youtube-lyrics';
 import { cn } from '@/lib/utils';
@@ -29,8 +28,6 @@ export function PlaybackQueue() {
     setLyrics,
     isLyricsLoading,
     setIsLyricsLoading,
-    playbackQuality,
-    setPlaybackQuality,
   } = usePlayer();
 
   const [activeLyricIndex, setActiveLyricIndex] = useState(-1);
@@ -106,13 +103,6 @@ export function PlaybackQueue() {
     }
   }, [currentSong, isQueueOpen, setLyrics, setIsLyricsLoading]);
 
-  const qualityOptions = [
-    { value: 'auto', label: 'Auto' },
-    { value: 'high', label: 'High' },
-    { value: 'standard', label: 'Standard' },
-    { value: 'low', label: 'Low' },
-  ];
-
   return (
     <Sheet open={isQueueOpen} onOpenChange={toggleQueue}>
       <SheetContent className="w-full md:max-w-md p-0 flex flex-col">
@@ -149,22 +139,7 @@ export function PlaybackQueue() {
             ))}
           </div>
         </ScrollArea>
-         <div className="p-4 border-t space-y-4">
-            <Label className="font-semibold">Playback Quality</Label>
-             <RadioGroup 
-                value={playbackQuality} 
-                onValueChange={(value) => setPlaybackQuality(value as 'auto' | 'high' | 'standard' | 'low')} 
-                className="grid grid-cols-4 gap-2"
-            >
-                {qualityOptions.map(option => (
-                <Label key={option.value} className="flex items-center justify-center rounded-md border p-2 text-sm cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-muted">
-                    <RadioGroupItem value={option.value} id={`q-${option.value}`} className="sr-only"/>
-                    {option.label}
-                </Label>
-                ))}
-            </RadioGroup>
-        </div>
-
+       
         {lyrics.length > 0 && (
              <Sheet open={isQueueOpen} onOpenChange={toggleQueue}>
                  <SheetContent className="w-full md:max-w-md p-0 flex flex-col">
@@ -238,3 +213,5 @@ export function PlaybackQueue() {
     </Sheet>
   );
 }
+
+    

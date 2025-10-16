@@ -77,7 +77,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     </SidebarMenuItem>
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild isActive={isActive('/settings')} className="hover:text-foreground">
-                        <Link href="#"><Settings /> <span>Settings</span></Link>
+                        <Link href="/settings"><Settings /> <span>Settings</span></Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>

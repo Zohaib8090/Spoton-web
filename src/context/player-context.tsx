@@ -512,7 +512,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         if (audioElement && currentSong) {
             const isNewSong = audioElement.src !== currentSong.audioSrc;
             if (isNewSong) {
-                if (audioElement.src.startsWith('blob:')) {
+                if (audioElement.src && audioElement.src.startsWith('blob:')) {
                     URL.revokeObjectURL(audioElement.src);
                 }
                 audioElement.src = currentSong.audioSrc;
@@ -570,7 +570,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const closePlayer = useCallback(() => {
     if (audioElement) {
         audioElement.pause();
-        if (audioElement.src.startsWith('blob:')) {
+        if (audioElement.src && audioElement.src.startsWith('blob:')) {
             URL.revokeObjectURL(audioElement.src);
         }
         audioElement.src = '';
@@ -757,5 +757,3 @@ export function usePlayer(): PlayerContextType {
   }
   return context;
 }
-
-    

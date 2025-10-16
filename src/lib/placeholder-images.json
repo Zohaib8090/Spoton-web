@@ -1,3 +1,94 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "album-1",
+      "description": "Abstract landscape",
+      "imageUrl": "https://picsum.photos/seed/a1/400/400",
+      "imageHint": "abstract landscape"
+    },
+    {
+      "id": "album-2",
+      "description": "City skyline at night",
+      "imageUrl": "https://picsum.photos/seed/a2/400/400",
+      "imageHint": "city skyline"
+    },
+    {
+      "id": "album-3",
+      "description": "Geometric patterns",
+      "imageUrl": "https://picsum.photos/seed/a3/400/400",
+      "imageHint": "geometric patterns"
+    },
+    {
+      "id": "album-4",
+      "description": "Serene forest path",
+      "imageUrl": "https://picsum.photos/seed/a4/400/400",
+      "imageHint": "forest path"
+    },
+    {
+      "id": "album-5",
+      "description": "Ocean waves crashing",
+      "imageUrl": "https://picsum.photos/seed/a5/400/400",
+      "imageHint": "ocean waves"
+    },
+    {
+      "id": "album-6",
+      "description": "Minimalist architecture",
+      "imageUrl": "https://picsum.photos/seed/a6/400/400",
+      "imageHint": "minimalist architecture"
+    },
+    {
+      "id": "album-7",
+      "description": "Cosmic nebula",
+      "imageUrl": "https://picsum.photos/seed/a7/400/400",
+      "imageHint": "cosmic nebula"
+    },
+    {
+      "id": "album-8",
+      "description": "Vintage car",
+      "imageUrl": "https://picsum.photos/seed/a8/400/400",
+      "imageHint": "vintage car"
+    },
+    {
+      "id": "album-9",
+      "description": "Desert dunes",
+      "imageUrl": "https://picsum.photos/seed/a9/400/400",
+      "imageHint": "desert dunes"
+    },
+    {
+      "id": "album-10",
+      "description": "Rainy street",
+      "imageUrl": "https://picsum.photos/seed/a10/400/400",
+      "imageHint": "rainy street"
+    },
+    {
+      "id": "album-11",
+      "description": "Mountain peak",
+      "imageUrl": "https://picsum.photos/seed/a11/400/400",
+      "imageHint": "mountain peak"
+    },
+    {
+      "id": "album-12",
+      "description": "Neon sign",
+      "imageUrl": "https://picsum.photos/seed/a12/400/400",
+      "imageHint": "neon sign"
+    },
+    {
+      "id": "playlist-1",
+      "description": "Chill vibes playlist",
+      "imageUrl": "https://picsum.photos/seed/p1/400/400",
+      "imageHint": "chill abstract"
+    },
+    {
+      "id": "playlist-2",
+      "description": "Workout playlist",
+      "imageUrl": "https://picsum.photos/seed/p2/400/400",
+      "imageHint": "energetic abstract"
+    },
+    {
+      "id": "playlist-3",
+      "description": "Focus playlist",
+      "imageUrl": "https://picsum.photos/seed/p3/400/400",
+      "imageHint": "calm abstract"
+    }
+  ]
 }

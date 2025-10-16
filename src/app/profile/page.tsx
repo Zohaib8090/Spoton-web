@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -37,35 +37,44 @@ export default function ProfilePage() {
     if (!user || !firestore) return;
 
     setIsUpdating(true);
-    try {
-      // Update Auth profile
-      await updateProfile(user, { 
-        displayName: displayName || '',
-        photoURL: photoURL || '' 
-      });
-      
-      // Update Firestore document
-      const userDocRef = doc(firestore, 'users', user.uid);
-      await setDoc(userDocRef, { 
-        username: displayName,
-        photoURL: photoURL
-      }, { merge: true });
 
-      toast({
-        title: 'Profile Updated',
-        description: 'Your profile has been successfully updated.',
-      });
-      // Force a reload of the user object to see changes
-      await user.reload();
-    } catch (error: any) {
+    // Update Auth profile
+    updateProfile(user, { 
+      displayName: displayName || '',
+      photoURL: photoURL || '' 
+    }).then(() => {
+        // Update Firestore document
+        const userDocRef = doc(firestore, 'users', user.uid);
+        const userData = { 
+            username: displayName,
+            photoURL: photoURL
+        };
+
+        setDoc(userDocRef, userData, { merge: true }).then(async () => {
+            toast({
+                title: 'Profile Updated',
+                description: 'Your profile has been successfully updated.',
+            });
+            // Force a reload of the user object to see changes
+            await user.reload();
+        }).catch(() => {
+            const permissionError = new FirestorePermissionError({
+                path: userDocRef.path,
+                operation: 'update',
+                requestResourceData: userData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
+
+    }).catch((error: any) => {
       toast({
         variant: 'destructive',
-        title: 'Update Failed',
+        title: 'Auth Update Failed',
         description: error.message,
       });
-    } finally {
-      setIsUpdating(false);
-    }
+    }).finally(() => {
+        setIsUpdating(false);
+    });
   };
 
   if (isUserLoading || !user) {

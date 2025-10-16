@@ -6,11 +6,12 @@ import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlbumArtwork } from '@/components/album-artwork';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp }from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { errorEmitter, FirestorePermissionError } from '@/firebase';
 
 export default function LibraryPage() {
   const { user, isUserLoading } = useUser();
@@ -30,32 +31,37 @@ export default function LibraryPage() {
     }
   }, [user, isUserLoading, router]);
 
-  const handleCreatePlaylist = async () => {
+  const handleCreatePlaylist = () => {
     if (!user || !firestore) return;
     
     const randomCover = PlaceHolderImages[Math.floor(Math.random() * PlaceHolderImages.length)].imageUrl;
 
-    try {
-      await addDoc(collection(firestore, 'users', user.uid, 'playlists'), {
-        name: 'My New Playlist',
-        description: 'A collection of my favorite tracks.',
-        trackIds: [],
-        createdAt: serverTimestamp(),
-        coverArt: randomCover,
-        userId: user.uid,
+    const newPlaylistData = {
+      name: 'My New Playlist',
+      description: 'A collection of my favorite tracks.',
+      trackIds: [],
+      createdAt: serverTimestamp(),
+      coverArt: randomCover,
+      userId: user.uid,
+    };
+
+    const playlistsCollection = collection(firestore, 'users', user.uid, 'playlists');
+
+    addDoc(playlistsCollection, newPlaylistData)
+      .then(() => {
+          toast({
+            title: 'Playlist created!',
+            description: 'Your new playlist has been added to your library.',
+          });
+      })
+      .catch((serverError) => {
+          const permissionError = new FirestorePermissionError({
+              path: playlistsCollection.path,
+              operation: 'create',
+              requestResourceData: newPlaylistData,
+          });
+          errorEmitter.emit('permission-error', permissionError);
       });
-      toast({
-        title: 'Playlist created!',
-        description: 'Your new playlist has been added to your library.',
-      });
-    } catch (error) {
-        console.error("Error creating playlist:", error);
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Could not create playlist."
-        });
-    }
   };
 
 

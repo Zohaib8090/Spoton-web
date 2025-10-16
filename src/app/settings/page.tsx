@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import { useTheme } from "next-themes";
@@ -44,18 +44,23 @@ export default function SettingsPage() {
     }
   }, [user, isUserLoading, router, userData]);
 
-  const updateSetting = useCallback(async (key: string, value: any) => {
+  const updateSetting = useCallback((key: string, value: any) => {
     if (!userDocRef) return;
-    try {
-      await setDoc(userDocRef, { settings: { [key]: value } }, { merge: true });
-    } catch (error) {
-      console.error("Failed to update settings:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to save your settings.",
+    const settingsUpdate = { settings: { [key]: value } };
+    setDoc(userDocRef, settingsUpdate, { merge: true })
+      .catch(() => {
+          const permissionError = new FirestorePermissionError({
+            path: userDocRef.path,
+            operation: 'update',
+            requestResourceData: settingsUpdate,
+          });
+          errorEmitter.emit('permission-error', permissionError);
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to save your settings.",
+          });
       });
-    }
   }, [userDocRef, toast]);
   
   const handleThemeChange = (isDarkMode: boolean) => {

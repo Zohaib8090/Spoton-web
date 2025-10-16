@@ -67,7 +67,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <>
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild isActive={isActive('/profile')} className="hover:text-foreground">
-                        <Link href="#"><User /> <span>View Profile</span></Link>
+                        <Link href="/profile"><User /> <span>View Profile</span></Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>

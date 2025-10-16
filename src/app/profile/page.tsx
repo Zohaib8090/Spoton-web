@@ -140,16 +140,17 @@ export default function ProfilePage() {
       try {
         await sendPasswordResetEmail(auth, user.email);
         toast({
-          title: 'Password reset email sent',
-          description: 'Please check your inbox to reset your password.',
+          title: 'Password Reset Email Sent',
+          description: `A password reset link has been sent to ${user.email}. Please check your spam folder.`,
+          duration: 9000,
         });
         setIsChangePasswordOpen(false);
         resetPasswordForm();
       } catch (error: any) {
         toast({
           variant: 'destructive',
-          title: 'Error sending email',
-          description: error.message,
+          title: 'Error Sending Email',
+          description: 'There was a problem sending the password reset email. Please try again.',
         });
       }
   }

@@ -8,8 +8,6 @@ import {
   SkipForward,
   SkipBack,
   Heart,
-  Shuffle,
-  Repeat,
   Mic2,
   ListMusic,
   Laptop2,
@@ -93,9 +91,6 @@ export function Player() {
 
         <div className="flex flex-col items-center justify-center gap-1 w-full max-w-2xl mx-auto">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" disabled={!currentSong} className="text-muted-foreground hover:text-foreground">
-              <Shuffle size={18} />
-            </Button>
             <Button variant="ghost" size="icon" onClick={playPrev} disabled={!currentSong} className="text-muted-foreground hover:text-foreground">
               <SkipBack size={20} className="fill-current" />
             </Button>
@@ -113,9 +108,6 @@ export function Player() {
             </Button>
             <Button variant="ghost" size="icon" onClick={playNext} disabled={!currentSong} className="text-muted-foreground hover:text-foreground">
               <SkipForward size={20} className="fill-current" />
-            </Button>
-            <Button variant="ghost" size="icon" disabled={!currentSong} className="text-muted-foreground hover:text-foreground">
-              <Repeat size={18} />
             </Button>
           </div>
           <div className="w-full flex items-center gap-2">

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -49,6 +50,7 @@ export default function SignupPage() {
         photoURL: user.photoURL,
         settings: {
           theme: 'dark',
+          playbackQuality: 'standard',
           notifications: {
             newReleases: true,
             playlistUpdates: true,
@@ -165,3 +167,5 @@ export default function SignupPage() {
     </div>
   );
 }
+
+    

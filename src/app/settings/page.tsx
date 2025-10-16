@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useDoc, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
@@ -12,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { BellRing } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 export default function SettingsPage() {
   const { user, isUserLoading } = useUser();
@@ -35,12 +37,17 @@ export default function SettingsPage() {
     playlistUpdates: false,
   });
 
+  const [playbackQuality, setPlaybackQuality] = useState('standard');
+
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
     }
     if (userData?.settings?.notifications) {
       setNotificationPrefs(userData.settings.notifications);
+    }
+    if (userData?.settings?.playbackQuality) {
+      setPlaybackQuality(userData.settings.playbackQuality);
     }
   }, [user, isUserLoading, router, userData]);
 
@@ -74,6 +81,12 @@ export default function SettingsPage() {
     setNotificationPrefs(newPrefs);
     updateSetting('notifications', newPrefs);
   };
+  
+  const handlePlaybackQualityChange = (value: string) => {
+    setPlaybackQuality(value);
+    updateSetting('playbackQuality', value);
+  };
+
 
   const handleNotificationPermission = async () => {
     if (!('Notification' in window)) {
@@ -115,7 +128,7 @@ export default function SettingsPage() {
       <div className="space-y-8">
         <Skeleton className="h-8 w-48" />
         <div className="space-y-6">
-          {[...Array(2)].map((_, i) => (
+          {[...Array(3)].map((_, i) => (
              <Card key={i}>
                 <CardHeader><Skeleton className="h-6 w-1/3" /></CardHeader>
                 <CardContent>
@@ -201,6 +214,42 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Playback</CardTitle>
+          <CardDescription>Adjust your audio streaming quality.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <RadioGroup 
+              value={playbackQuality} 
+              onValueChange={handlePlaybackQualityChange} 
+              className="grid gap-4"
+            >
+              <Label className="flex items-center justify-between rounded-lg border p-4 cursor-pointer has-[:checked]:border-primary">
+                <div className="flex flex-col space-y-1">
+                    <span>High</span>
+                    <span className="font-normal leading-snug text-muted-foreground">Best audio quality, uses more data.</span>
+                </div>
+                <RadioGroupItem value="high" id="q-high" />
+              </Label>
+              <Label className="flex items-center justify-between rounded-lg border p-4 cursor-pointer has-[:checked]:border-primary">
+                 <div className="flex flex-col space-y-1">
+                    <span>Standard</span>
+                    <span className="font-normal leading-snug text-muted-foreground">Good balance of quality and data usage.</span>
+                </div>
+                <RadioGroupItem value="standard" id="q-standard" />
+              </Label>
+              <Label className="flex items-center justify-between rounded-lg border p-4 cursor-pointer has-[:checked]:border-primary">
+                <div className="flex flex-col space-y-1">
+                    <span>Low</span>
+                    <span className="font-normal leading-snug text-muted-foreground">Saves data with slightly lower quality.</span>
+                </div>
+                <RadioGroupItem value="low" id="q-low" />
+              </Label>
+            </RadioGroup>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -226,3 +275,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    

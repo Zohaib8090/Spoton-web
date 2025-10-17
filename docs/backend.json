@@ -99,8 +99,7 @@
                 "monoAudio": { "type": "boolean" },
                 "equaliserEnabled": { "type": "boolean" },
                 "volumeNormalization": { "type": "boolean" },
-                "balance": { "type": "number", "description": "Audio balance from -1 (left) to 1 (right)." },
-                "gain": { "type": "number", "description": "Audio gain in decibels." }
+                "balance": { "type": "number", "description": "Audio balance from -1 (left) to 1 (right)." }
               }
             },
              "equaliser": {

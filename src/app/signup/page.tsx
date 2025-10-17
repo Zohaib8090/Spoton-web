@@ -71,6 +71,7 @@ export default function SignupPage() {
             monoAudio: false,
             equaliserEnabled: false,
             volumeNormalization: true,
+            balance: 0,
           },
           equaliser: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         }

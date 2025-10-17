@@ -62,7 +62,6 @@ export default function SettingsPage() {
     equaliserEnabled: false,
     volumeNormalization: true,
     balance: 0,
-    gain: 0,
   });
   
   const [isEqDialogOpen, setIsEqDialogOpen] = useState(false);
@@ -156,7 +155,7 @@ export default function SettingsPage() {
     updateSetting('trackTransitions', newTransitions);
   };
 
-  const handleListeningControlChange = (control: keyof Omit<typeof listeningControls, 'balance' | 'gain'>, value: boolean) => {
+  const handleListeningControlChange = (control: keyof Omit<typeof listeningControls, 'balance'>, value: boolean) => {
     const newControls = { ...listeningControls, [control]: value };
     setListeningControls(newControls);
     updateSetting('listeningControls', newControls);
@@ -166,12 +165,6 @@ export default function SettingsPage() {
       const newControls = { ...listeningControls, balance: value[0] };
       setListeningControls(newControls);
       updateSetting('listeningControls', newControls);
-  };
-
-  const handleGainChange = (value: number[]) => {
-    const newControls = { ...listeningControls, gain: value[0] };
-    setListeningControls(newControls);
-    updateSetting('listeningControls', newControls);
   };
 
 
@@ -199,7 +192,7 @@ export default function SettingsPage() {
     if (permission === 'granted') {
       toast({
         title: "Notifications Enabled!",
-        description: "You will now receive notifications from HarmonyStream.",
+        description: "You will now receive notifications from Spoton.",
       });
     } else {
       toast({
@@ -412,27 +405,6 @@ export default function SettingsPage() {
                 checked={listeningControls.volumeNormalization}
                 onCheckedChange={(checked) => handleListeningControlChange('volumeNormalization', checked)}
               />
-            </div>
-             <div className="space-y-3 rounded-lg border p-4">
-                <div className="flex items-center justify-between">
-                    <Label htmlFor="gain" className="flex flex-col space-y-1">
-                        <span>Gain</span>
-                        <span className="font-normal leading-snug text-muted-foreground">
-                            Increase or decrease the overall volume.
-                        </span>
-                    </Label>
-                    <span className="text-sm font-bold w-16 text-right">{listeningControls.gain > 0 ? '+' : ''}{listeningControls.gain.toFixed(1)} dB</span>
-                </div>
-                <div className="relative pt-2">
-                    <Slider
-                        id="gain"
-                        min={-12}
-                        max={12}
-                        step={0.5}
-                        value={[listeningControls.gain]}
-                        onValueChange={handleGainChange}
-                    />
-                </div>
             </div>
           </CardContent>
         </Card>

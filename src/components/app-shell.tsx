@@ -53,7 +53,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
 
   return (
-    <SidebarProvider defaultOpen={false}>
+    <SidebarProvider defaultOpen={true}>
       <div className="relative flex h-screen w-full overflow-hidden">
         <Sidebar>
           <SidebarRail />
@@ -105,7 +105,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               "pb-20": !currentSong,
             })}>
               <div className="flex items-center gap-4">
-                <SidebarTrigger className="md:hidden" />
+                <SidebarTrigger />
                 <div className="absolute top-0 left-0 w-full h-[250px] bg-gradient-to-b from-primary/40 to-background -z-10" />
               </div>
               {children}

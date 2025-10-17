@@ -1,7 +1,7 @@
 {
-  "name": "Spoton Music",
+  "name": "Spoton",
   "short_name": "Spoton",
-  "description": "A modern music streaming experience.",
+  "description": "Your ultimate music streaming experience.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",

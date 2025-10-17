@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, ChangeEvent } from "react";
+import { useState, ChangeEvent, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import type { Song } from "@/lib/types";
 import { Search, Play, Loader2 } from "lucide-react";
@@ -31,6 +31,7 @@ export default function SearchPage() {
   const { toast } = useToast();
   const { user } = useUser();
   const firestore = useFirestore();
+  const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
 
   const handleYoutubeSearch = async (searchQuery: string) => {
       if (searchQuery.trim().length < 2) {
@@ -56,11 +57,16 @@ export default function SearchPage() {
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const newQuery = e.target.value;
     setQuery(newQuery);
-    // Debounce search
+
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+    
     const timer = setTimeout(() => {
         handleYoutubeSearch(newQuery);
-    }, 300);
-    return () => clearTimeout(timer);
+    }, 500); // 500ms debounce
+    
+    setDebounceTimer(timer);
   }
 
   const handlePlayYoutube = (ytResult: YoutubeResult) => {
@@ -208,4 +214,3 @@ export default function SearchPage() {
     </div>
   );
 }
-

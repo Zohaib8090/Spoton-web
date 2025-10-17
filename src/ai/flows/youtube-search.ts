@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -9,7 +10,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 import { google } from 'googleapis';
 
 const YoutubeSearchInputSchema = z.object({
@@ -103,11 +104,15 @@ const searchYoutubeFlow = ai.defineFlow(
                 }
             }
 
+            const thumbnails = item.snippet?.thumbnails;
+            const thumbnail = thumbnails?.high?.url || thumbnails?.medium?.url || thumbnails?.default?.url || '';
+
+
             return {
                 id: item.id || '',
                 title: title.trim(),
                 artist: artist.trim().replace(' - Topic', ''),
-                thumbnail: item.snippet?.thumbnails?.default?.url || '',
+                thumbnail: thumbnail,
                 duration: item.contentDetails?.duration ? formatDuration(item.contentDetails.duration) : '0:00',
             };
         }) || [];

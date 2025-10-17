@@ -25,8 +25,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 const BANDS = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+const DEFAULT_EQ_SETTINGS = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 const PRESETS = {
-  "default": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  "default": DEFAULT_EQ_SETTINGS,
   "rock": [5, 3, 1, -2, -1, 2, 4, 5, 6, 7],
   "pop": [-2, -1, 0, 2, 4, 4, 2, 0, -1, -2],
   "jazz": [4, 2, 1, 3, -1, -1, 0, 2, 3, 4],
@@ -44,16 +45,17 @@ interface EqualiserDialogProps {
 
 export function EqualiserDialog({ isOpen, onOpenChange }: EqualiserDialogProps) {
   const { equaliserSettings, setEqualiserSettings, isEqEnabled, toggleEq } = usePlayer();
-  const [localSettings, setLocalSettings] = useState(equaliserSettings);
+  const [localSettings, setLocalSettings] = useState(equaliserSettings || DEFAULT_EQ_SETTINGS);
   const [activePreset, setActivePreset] = useState<PresetName>("default");
   const [bassBoost, setBassBoost] = useState(0);
   const [isManualBass, setIsManualBass] = useState(false);
 
   useEffect(() => {
-    setLocalSettings(equaliserSettings);
+    const newSettings = equaliserSettings || DEFAULT_EQ_SETTINGS;
+    setLocalSettings(newSettings);
     // Initialize bass boost based on settings if not manually adjusted
     if (!isManualBass) {
-        const avgBass = Math.round((equaliserSettings[0] + equaliserSettings[1]) / 2);
+        const avgBass = Math.round((newSettings[0] + newSettings[1]) / 2);
         setBassBoost(avgBass);
     }
   }, [equaliserSettings, isOpen, isManualBass]);
@@ -124,13 +126,13 @@ export function EqualiserDialog({ isOpen, onOpenChange }: EqualiserDialogProps) 
                     min={-12}
                     max={12}
                     step={1}
-                    value={[localSettings[index]]}
+                    value={[localSettings?.[index] ?? 0]}
                     onValueChange={(value) => handleSliderChange(index, value[0])}
                     className="h-48"
                     disabled={!isEqEnabled || (!isManualBass && (index === 0 || index === 1))}
                 />
                 <Label htmlFor={`band-${band}`} className="text-xs text-muted-foreground">{band < 1000 ? band : `${band/1000}k`}Hz</Label>
-                <span className="text-xs font-mono w-10 text-center">{localSettings[index]}dB</span>
+                <span className="text-xs font-mono w-10 text-center">{localSettings?.[index] ?? 0}dB</span>
                 </div>
             ))}
             </div>

@@ -168,18 +168,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     // Equaliser setup
     if (isEqEnabled) {
+      const currentEqSettings = equaliserSettings || DEFAULT_EQ_SETTINGS;
       if (eqNodesRef.current.length === 0) {
         eqNodesRef.current = BANDS.map((frequency, i) => {
           const filter = audioContext.createBiquadFilter();
           filter.type = i === 0 ? 'lowshelf' : (i === BANDS.length - 1 ? 'highshelf' : 'peaking');
           filter.frequency.value = frequency;
-          filter.gain.value = equaliserSettings[i];
+          filter.gain.value = currentEqSettings[i];
           filter.Q.value = 1.41;
           return filter;
         });
       } else {
          eqNodesRef.current.forEach((filter, i) => {
-             filter.gain.value = equaliserSettings[i];
+             filter.gain.value = currentEqSettings[i];
          });
       }
       eqNodesRef.current.forEach(filter => {
@@ -209,6 +210,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setIsEqEnabled(listeningControls.equaliserEnabled);
   }, [listeningControls.equaliserEnabled]);
   
+  useEffect(() => {
+      _setEqualiserSettings(userData?.settings?.equaliser || DEFAULT_EQ_SETTINGS);
+  }, [userData?.settings?.equaliser]);
+
   const setEqualiserSettings = (settings: number[]) => {
     _setEqualiserSettings(settings);
     if(userDocRef) {
@@ -252,7 +257,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const playSong = useCallback((song: Song, newPlaylist?: Song[], isAutoplay: boolean = false) => {
     if (youtubePlayer && typeof youtubePlayer.stopVideo === 'function' && youtubePlayer.getIframe?.()?.src) {
         youtubePlayer.stopVideo();
-    } else if (audioElement) {
+    }
+    if (audioElement) {
         audioElement.pause();
     }
 
@@ -328,7 +334,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (!currentSong || activePlaylist.length === 0) return;
 
     if (loop === 'song') {
-      if (currentSong.isFromYouTube && youtubePlayer) {
+      if (currentSong.isFromYouTube && youtubePlayer && typeof youtubePlayer.seekTo === 'function' && typeof youtubePlayer.playVideo === 'function' && youtubePlayer.getIframe?.()) {
           youtubePlayer.seekTo(0);
           youtubePlayer.playVideo();
       } else if (audioElement) {
@@ -455,7 +461,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     const baseVolume = listeningControls.volumeNormalization ? 0.8 : 1;
     if (audioElement) audioElement.volume = baseVolume;
-    if (youtubePlayer && typeof youtubePlayer.setVolume === 'function' && youtubePlayer.getIframe?.()?.src) {
+    if (youtubePlayer && typeof youtubePlayer.setVolume === 'function' && youtubePlayer.getIframe?.()) {
       youtubePlayer.setVolume(baseVolume * 100);
     }
     
@@ -488,7 +494,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (currentSong?.isFromYouTube) {
         if (audioElement) audioElement.pause();
-        if (youtubePlayer && typeof youtubePlayer.playVideo === 'function' && youtubePlayer.getIframe?.()?.src) {
+        if (youtubePlayer && typeof youtubePlayer.playVideo === 'function' && youtubePlayer.getIframe?.()) {
             if (isPlaying) {
                 youtubePlayer.playVideo();
             } else {
@@ -496,7 +502,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             }
         }
     } else {
-        if (youtubePlayer && typeof youtubePlayer.stopVideo === 'function' && youtubePlayer.getIframe?.()?.src) {
+        if (youtubePlayer && typeof youtubePlayer.stopVideo === 'function' && youtubePlayer.getIframe?.()) {
             youtubePlayer.stopVideo();
         }
         if (audioElement && currentSong) {
@@ -565,7 +571,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         }
         audioElement.src = '';
     }
-    if (youtubePlayer && typeof youtubePlayer.stopVideo === 'function' && youtubePlayer.getIframe?.()?.src) {
+    if (youtubePlayer && typeof youtubePlayer.stopVideo === 'function' && youtubePlayer.getIframe?.()) {
       youtubePlayer.stopVideo();
     }
     
@@ -715,6 +721,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     toggleEq,
     handleCreatePlaylist,
     seek,
+    equaliserSettings
   };
 
   return (

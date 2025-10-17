@@ -52,6 +52,7 @@ export function AlbumArtwork({ album, isPlaylist = false, className, ...props }:
             alt={album.name}
             width={250}
             height={250}
+            quality={100}
             className="h-auto w-auto object-cover aspect-square transition-all hover:scale-105"
             data-ai-hint="album cover"
           />

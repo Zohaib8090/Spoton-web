@@ -151,6 +151,7 @@ export default function PlaylistPage({ params }: { params: { id: string } }) {
           alt={name}
           width={200}
           height={200}
+          quality={100}
           className="rounded-lg shadow-lg w-40 h-40 sm:w-48 sm:h-48 flex-shrink-0"
           data-ai-hint="album cover playlist"
         />

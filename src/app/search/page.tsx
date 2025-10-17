@@ -188,6 +188,7 @@ export default function SearchPage() {
                     alt={result.title}
                     width={40}
                     height={40}
+                    quality={100}
                     className="rounded-md mr-4"
                     unoptimized
                 />

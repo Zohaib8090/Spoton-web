@@ -140,6 +140,7 @@ export function Player() {
                 alt={currentSong.album}
                 width={56}
                 height={56}
+                quality={100}
                 className="rounded-md"
                 data-ai-hint="album cover"
                 unoptimized={currentSong.isFromYouTube}

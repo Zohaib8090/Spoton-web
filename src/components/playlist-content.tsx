@@ -1,3 +1,4 @@
+
 "use client"
 
 import Image from "next/image"
@@ -52,6 +53,7 @@ function SongRow({ song, index, onPlay, isCurrentlyPlaying, songs }: { song: Son
                 alt={song.album} 
                 width={40} 
                 height={40} 
+                quality={100}
                 className="rounded-sm flex-shrink-0"
                 data-ai-hint="album cover"
               />

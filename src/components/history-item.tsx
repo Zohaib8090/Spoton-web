@@ -23,6 +23,7 @@ export function HistoryItem({ song }: { song: Song }) {
         alt={song.title}
         width={40}
         height={40}
+        quality={100}
         className="rounded-md mr-4"
         unoptimized={song.isFromYouTube}
       />

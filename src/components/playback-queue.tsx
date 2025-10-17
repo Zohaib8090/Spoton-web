@@ -130,7 +130,7 @@ export function PlaybackQueue() {
                 )}
                 onClick={() => playSong(song)}
               >
-                <Image src={song.albumArt} alt={song.album} width={40} height={40} className="rounded" />
+                <Image src={song.albumArt} alt={song.album} width={40} height={40} quality={100} className="rounded" />
                 <div className="truncate">
                   <p className={cn("font-medium text-sm truncate", currentSong?.id === song.id && "text-primary")}>{song.title}</p>
                   <p className="text-xs text-muted-foreground truncate">{song.artist}</p>

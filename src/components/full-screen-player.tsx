@@ -198,6 +198,7 @@ export function FullScreenPlayer() {
                             alt={currentSong.album}
                             width={500}
                             height={500}
+                            quality={100}
                             className="rounded-lg shadow-2xl aspect-square object-cover w-full h-full"
                             data-ai-hint="album cover"
                             unoptimized={currentSong.isFromYouTube}

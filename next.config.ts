@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  env: {
+    YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY,
+  },
   images: {
     remotePatterns: [
       {

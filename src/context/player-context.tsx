@@ -479,7 +479,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (currentSong?.isFromYouTube) {
         if (audioElement) audioElement.pause();
-        if (youtubePlayer && youtubePlayer.playVideo) {
+        if (youtubePlayer && typeof youtubePlayer.playVideo === 'function' && youtubePlayer.getIframe?.()) {
             if (isPlaying) {
                 youtubePlayer.playVideo();
             } else {

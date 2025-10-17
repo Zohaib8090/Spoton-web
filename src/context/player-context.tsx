@@ -277,7 +277,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const playSong = useCallback((song: Song, newPlaylist?: Song[], isAutoplay: boolean = false) => {
-    if (currentSong?.isFromYouTube && youtubePlayer) {
+    if (currentSong?.isFromYouTube && youtubePlayer && typeof youtubePlayer.stopVideo === 'function') {
       youtubePlayer.stopVideo();
     } else if (audioElement) {
       audioElement.pause();
@@ -514,7 +514,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             }
         }
     } else {
-        if (youtubePlayer && youtubePlayer.stopVideo) youtubePlayer.stopVideo();
+        if (youtubePlayer && typeof youtubePlayer.stopVideo === 'function' && youtubePlayer.getIframe?.()) {
+            youtubePlayer.stopVideo();
+        }
         if (audioElement && currentSong) {
             const isNewSong = audioElement.src !== currentSong.audioSrc;
             if (isNewSong) {

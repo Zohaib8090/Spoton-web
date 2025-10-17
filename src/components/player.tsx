@@ -33,6 +33,7 @@ export function Player() {
     youtubePlayer,
     toggleFullScreenPlayer,
     toggleQueue,
+    seek,
   } = usePlayer();
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState("0:00");
@@ -92,13 +93,7 @@ export function Player() {
 
   const handleProgressChange = (value: number[]) => {
     const newProgress = value[0];
-    if (currentSong?.isFromYouTube && youtubePlayer) {
-      const newTime = (newProgress / 100) * youtubePlayer.getDuration();
-      youtubePlayer.seekTo(newTime, true);
-    } else if (audioElement) {
-      const newTime = (newProgress / 100) * audioElement.duration;
-      audioElement.currentTime = newTime;
-    }
+    seek(newProgress);
     setProgress(newProgress);
   };
 

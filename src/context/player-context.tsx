@@ -51,7 +51,6 @@ interface PlayerContextType {
   setLyrics: Dispatch<SetStateAction<LyricLine[]>>;
   setIsLyricsLoading: Dispatch<SetStateAction<boolean>>;
   setYoutubePlayer: Dispatch<SetStateAction<any | null>>;
-  setCurrentTime: Dispatch<SetStateAction<number>>;
   setEqualiserSettings: (settings: number[]) => void;
   toggleEq: () => void;
   toggleShowVideo: () => void;
@@ -65,6 +64,7 @@ interface PlayerContextType {
   toggleShuffle: () => void;
   toggleLoop: () => void;
   handleCreatePlaylist: () => void;
+  seek: (percentage: number) => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -250,12 +250,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const playSong = useCallback((song: Song, newPlaylist?: Song[], isAutoplay: boolean = false) => {
-    if (currentSong?.isFromYouTube && youtubePlayer && typeof youtubePlayer.stopVideo === 'function' && youtubePlayer.getIframe?.()?.src) {
-      youtubePlayer.stopVideo();
+    if (youtubePlayer && typeof youtubePlayer.stopVideo === 'function' && youtubePlayer.getIframe?.()?.src) {
+        youtubePlayer.stopVideo();
     } else if (audioElement) {
-      audioElement.pause();
+        audioElement.pause();
     }
-    
+
     if (fadeIntervalRef.current) {
         clearInterval(fadeIntervalRef.current);
         fadeIntervalRef.current = null;
@@ -298,7 +298,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     
     nextSongTriggeredRef.current = false;
 
-  }, [toast, shuffle, playlist, audioElement, youtubePlayer, currentSong]);
+  }, [toast, shuffle, playlist, audioElement, youtubePlayer]);
 
   const findAndPlaySong = async (query: string) => {
     try {
@@ -393,6 +393,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       playSong(activePlaylist[prevIndex], playlist);
     }
   }, [currentSong, playlist, shuffledPlaylist, playSong, shuffle]);
+  
+  const seek = (percentage: number) => {
+    if (currentSong?.isFromYouTube && youtubePlayer?.getDuration) {
+      const newTime = (percentage / 100) * youtubePlayer.getDuration();
+      youtubePlayer.seekTo(newTime, true);
+    } else if (audioElement?.duration) {
+      audioElement.currentTime = (percentage / 100) * audioElement.duration;
+    }
+  };
 
   useEffect(() => {
     if ('mediaSession' in navigator) {
@@ -479,7 +488,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (currentSong?.isFromYouTube) {
         if (audioElement) audioElement.pause();
-        if (youtubePlayer && typeof youtubePlayer.playVideo === 'function' && youtubePlayer.getIframe?.()) {
+        if (youtubePlayer && typeof youtubePlayer.playVideo === 'function' && youtubePlayer.getIframe?.()?.src) {
             if (isPlaying) {
                 youtubePlayer.playVideo();
             } else {
@@ -487,7 +496,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             }
         }
     } else {
-        if (youtubePlayer && typeof youtubePlayer.stopVideo === 'function' && youtubePlayer.getIframe?.()) {
+        if (youtubePlayer && typeof youtubePlayer.stopVideo === 'function' && youtubePlayer.getIframe?.()?.src) {
             youtubePlayer.stopVideo();
         }
         if (audioElement && currentSong) {
@@ -556,7 +565,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         }
         audioElement.src = '';
     }
-    if (youtubePlayer && typeof youtubePlayer.stopVideo === 'function' && youtubePlayer.getIframe?.()) {
+    if (youtubePlayer && typeof youtubePlayer.stopVideo === 'function' && youtubePlayer.getIframe?.()?.src) {
       youtubePlayer.stopVideo();
     }
     
@@ -701,12 +710,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     showVideo,
     toggleShowVideo,
     setYoutubePlayer,
-    setCurrentTime,
-    handleCreatePlaylist,
-    equaliserSettings,
     setEqualiserSettings,
     isEqEnabled,
     toggleEq,
+    handleCreatePlaylist,
+    seek,
   };
 
   return (

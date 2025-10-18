@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase';
 import { AlbumArtwork } from "@/components/album-artwork";
 import { PersonalizedRecommendations } from "@/components/personalized-recommendations";
-import { MyPins } from "@/components/my-pins";
 import { albums, playlists } from "@/lib/data";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,15 +32,6 @@ export default function Home() {
   
   return (
     <div className="space-y-8 pb-8">
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold tracking-tight">My Pins</h2>
-        </div>
-        <MyPins />
-      </div>
-      
-      <Separator />
-
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-bold tracking-tight">Personalized Recommendations</h2>

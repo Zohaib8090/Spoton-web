@@ -2,34 +2,16 @@
 "use client"
 
 import Image from "next/image"
-import { Play, Pause, Pin } from "lucide-react"
+import { Play, Pause } from "lucide-react"
 import { usePlayer } from "@/context/player-context"
 import type { Song } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from "firebase/firestore"
-import { PinButton } from "./pin-button"
-import { useState, useEffect } from "react"
 
-function SongRow({ song, index, onPlay, isCurrentlyPlaying, songs }: { song: Song, index: number, onPlay: (song: Song) => void, isCurrentlyPlaying: boolean, songs: Song[] }) {
-    const { user } = useUser();
-    const firestore = useFirestore();
-    const [isPinned, setIsPinned] = useState(false);
-
-    const pinsQuery = useMemoFirebase(() =>
-        user && firestore ? query(collection(firestore, 'users', user.uid, 'pins'), where('itemId', '==', song.id)) : null,
-        [user, firestore, song.id]
-    );
-    const { data: pins } = useCollection(pinsQuery);
-
-    useEffect(() => {
-        setIsPinned(!!pins && pins.length > 0);
-    }, [pins]);
-
+function SongRow({ song, index, onPlay, isCurrentlyPlaying }: { song: Song, index: number, onPlay: (song: Song) => void, isCurrentlyPlaying: boolean }) {
     return (
         <div
             className={cn(
-              "grid grid-cols-[2rem_1fr_auto] sm:grid-cols-[2rem_1fr_1fr_auto_2rem] items-center gap-4 p-2 rounded-md hover:bg-muted/50 transition-colors group",
+              "grid grid-cols-[2rem_1fr_auto] sm:grid-cols-[2rem_1fr_1fr_auto] items-center gap-4 p-2 rounded-md hover:bg-muted/50 transition-colors group",
               isCurrentlyPlaying && "bg-muted/50"
             )}
             onDoubleClick={() => onPlay(song)}
@@ -66,22 +48,6 @@ function SongRow({ song, index, onPlay, isCurrentlyPlaying, songs }: { song: Son
             <div className="hidden sm:block text-muted-foreground truncate">{song.album}</div>
             
             <div className="hidden sm:block text-muted-foreground justify-self-end">{song.duration}</div>
-
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                {user && (
-                    <PinButton
-                        item={{
-                            id: song.id,
-                            type: 'song',
-                            name: song.title,
-                            artist: song.artist,
-                            albumArt: song.albumArt
-                        }}
-                        isPinned={isPinned}
-                        onPinChange={setIsPinned}
-                    />
-                )}
-            </div>
           </div>
     )
 }
@@ -109,7 +75,6 @@ export function PlaylistContent({ songs }: { songs: Song[] }) {
             index={index}
             onPlay={handlePlayClick} 
             isCurrentlyPlaying={isCurrentlyPlaying}
-            songs={songs}
           />
         )
       })}

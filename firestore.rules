@@ -1,100 +1,128 @@
 /**
- * @fileoverview Firestore Security Rules for Spoton application.
+ * @fileoverview Firestore Security Rules for Spoton Music App
  *
  * Core Philosophy:
  * This ruleset enforces a strict user-ownership model for user profiles and their associated playlists and pins.
- * Tracks are treated as public read-only data.
+ * Tracks are treated as global, publicly readable resources.
  *
  * Data Structure:
- * - /users/{userId}: Stores user profile data. Access is restricted to the user themselves.
+ * - /users/{userId}: Stores user profile data. Access is restricted to the owning user.
  * - /users/{userId}/playlists/{playlistId}: Stores playlists created by each user. Access is restricted to the owning user.
  * - /users/{userId}/pins/{pinId}: Stores pinned items for each user. Access is restricted to the owning user.
- * - /tracks/{trackId}: Stores track metadata. Publicly readable.
+ * - /tracks/{trackId}: Stores global track metadata. Publicly readable.
  *
  * Key Security Decisions:
- * - Users can only access their own profile data, playlists, and pins. Listing other users' playlists or pins is not permitted.
- * - Tracks are publicly readable, but write access is denied to everyone.
+ * - Users can only access their own profile data, playlists, and pinned items.
+ * - Listing other users' playlists or pins is disallowed.
+ * - Tracks are publicly readable but cannot be created, updated, or deleted through the client; these actions are reserved for backend services.
+ * - No schema validation is performed in this prototyping phase, except for ownership checks and relationship consistency.
  *
  * Denormalization for Authorization:
- *  This ruleset does not require denormalization.  Authorization is derived from `request.auth.uid` and path-based ownership.
- *
- * Structural Segregation:
- *  User-specific data (profiles, playlists, pins) is stored under the /users/{userId} path, ensuring private access.
+ * - The data model inherently supports authorization independence because playlists and pins are stored within user-specific subcollections, allowing direct path-based authorization.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
+     * @description Manages user profile data.  Users can only read and write their own profiles.
+     * @path /users/{userId}
+     * @allow (create) User with ID 'user123' can create their profile.
+     *   request.auth.uid == 'user123' && request.resource.data.id == 'user123'
+     * @allow (get, update, delete) User with ID 'user123' can read, update, and delete their own profile.
+     *   request.auth.uid == 'user123'
+     * @deny (get, update, delete) User with ID 'user456' cannot read, update, or delete user 'user123's profile.
+     *   request.auth.uid == 'user456'
+     * @principle Enforces document ownership for writes.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false; // Disallowing listing of all users for privacy
+
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Manages playlists created by a user.  Users can only access playlists under their own user ID.
+     * @path /users/{userId}/playlists/{playlistId}
+     * @allow (create) User with ID 'user123' can create a playlist under their ID.
+     *   request.auth.uid == 'user123'
+     * @allow (get, update, delete) User with ID 'user123' can read, update, and delete a playlist under their ID.
+     *   request.auth.uid == 'user123'
+     * @deny (get, update, delete) User with ID 'user456' cannot read, update, or delete playlists under user 'user123's ID.
+     *   request.auth.uid == 'user456'
+     * @principle Enforces hierarchical ownership; only the user can manage their own playlists.
+     */
+    match /users/{userId}/playlists/{playlistId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+    
+    /**
+     * @description Manages pinned items for a user.  Users can only access pins under their own user ID.
+     * @path /users/{userId}/pins/{pinId}
+     * @allow (create) User with ID 'user123' can create a pin under their ID.
+     *   request.auth.uid == 'user123'
+     * @allow (get, update, delete) User with ID 'user123' can read, update, and delete a pin under their ID.
+     *   request.auth.uid == 'user123'
+     * @deny (get, update, delete) User with ID 'user456' cannot read, update, or delete pins under user 'user123's ID.
+     *   request.auth.uid == 'user456'
+     * @principle Enforces hierarchical ownership; only the user can manage their own pinned items.
+     */
+    match /users/{userId}/pins/{pinId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId);
+        allow update: if isExistingOwner(userId);
+        allow delete: if isExistingOwner(userId);
+    }
+
+
+    /**
+     * @description Manages track metadata.  Tracks are globally readable, but write operations are disallowed from the client.
+     * @path /tracks/{trackId}
+     * @allow (get, list) Any user can read track metadata.
+     * @deny (create, update, delete) No user can create, update, or delete tracks via the client.
+     * @principle Tracks are public read-only, with write access reserved for backend services.
+     */
+    match /tracks/{trackId} {
+      allow get, list: if true;
+      allow create, update, delete: if false;
+    }
+
+    // ------ Helper functions ------
+
+    /**
      * @description Checks if the request is made by the owner of the resource.
-     * @param {string} userId - The user ID to compare against the request's authentication UID.
-     * @return {boolean} - True if the user is the owner, false otherwise.
+     * @param {string} userId The user ID to compare against the request's authentication UID.
+     * @return {bool} True if the request is made by the owner, false otherwise.
      */
     function isOwner(userId) {
-      return request.auth.uid == userId;
+      return isSignedIn() && request.auth.uid == userId;
     }
 
     /**
      * @description Checks if the request is made by the owner of an existing resource.
-     *              Combines ownership check with existence check.
-     * @param {string} userId - The user ID to compare against the request's authentication UID.
-     * @return {boolean} - True if the user is the owner and the resource exists, false otherwise.
+     * @param {string} userId The user ID to compare against the request's authentication UID.
+     * @return {bool} True if the request is made by the owner and the resource exists, false otherwise.
      */
     function isExistingOwner(userId) {
-      return isOwner(userId) && exists(resource);
+      return isOwner(userId) && resource != null;
     }
 
     /**
      * @description Checks if the user is signed in.
-     * @return {boolean} - True if the user is signed in, false otherwise.
+     * @return {bool} True if the user is signed in, false otherwise.
      */
     function isSignedIn() {
       return request.auth != null;
-    }
-
-    /**
-     * @description Rules for user profiles.
-     * @path /users/{userId}
-     */
-    match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
-    }
-
-    /**
-     * @description Rules for user playlists.
-     * @path /users/{userId}/playlists/{playlistId}
-     */
-    match /users/{userId}/playlists/{playlistId} {
-      allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
-    }
-
-    /**
-     * @description Rules for user pins.
-     * @path /users/{userId}/pins/{pinId}
-     */
-    match /users/{userId}/pins/{pinId} {
-      allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
-    }
-
-    /**
-     * @description Rules for tracks.  Tracks are publicly readable.
-     * @path /tracks/{trackId}
-     */
-    match /tracks/{trackId} {
-      allow get: if true;
-      allow list: if true;
     }
   }
 }

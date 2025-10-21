@@ -11,7 +11,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase, errorEmitter, Firestore
 import { doc, collection, addDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { generatePersonalizedRecommendations } from '@/ai/flows/personalized-recommendations';
-import { searchYoutube } from '@/ai/flows/youtube-search';
+import { searchYoutubeAction, type YoutubeResult } from '@/app/search/actions';
 
 type LoopMode = 'none' | 'playlist' | 'song';
 export type Quality = 'automatic' | 'high' | 'standard' | 'low' | 'very-high';
@@ -308,9 +308,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const findAndPlaySong = async (query: string) => {
     try {
-      const searchRes = await searchYoutube({ query });
-      if (searchRes.results.length > 0) {
-        const ytResult = searchRes.results[0];
+      const { results, error } = await searchYoutubeAction(query);
+      if (error) {
+        throw new Error(error);
+      }
+      if (results && results.length > 0) {
+        const ytResult = results[0];
         const nextSong: Song = {
           id: ytResult.id,
           title: ytResult.title,

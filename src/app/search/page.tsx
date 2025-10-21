@@ -1,53 +1,45 @@
 
 "use client";
 
-import { useState, ChangeEvent, useCallback } from "react";
+import { useState, ChangeEvent, useCallback, useTransition } from "react";
 import { Input } from "@/components/ui/input";
 import type { Song } from "@/lib/types";
 import { Search, Play, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { usePlayer } from "@/context/player-context";
 import { Button } from "@/components/ui/button";
-import { searchYoutube } from "@/ai/flows/youtube-search";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { searchYoutubeAction, type YoutubeResult } from "./actions";
 
-
-type YoutubeResult = {
-    id: string;
-    title: string;
-    artist: string;
-    thumbnail: string;
-    duration: string;
-}
 
 export default function SearchPage() {
   const [query, setQuery] = useState("");
   const [youtubeResults, setYoutubeResults] = useState<YoutubeResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const { playSong, currentSong } = usePlayer();
   const { toast } = useToast();
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
 
-  const handleYoutubeSearch = async (searchQuery: string) => {
+  const handleYoutubeSearch = (searchQuery: string) => {
       if (searchQuery.trim().length < 2) {
           setYoutubeResults([]);
           return;
       }
-      setIsSearching(true);
-      try {
-          const res = await searchYoutube({ query: searchQuery });
-          setYoutubeResults(res.results);
-      } catch (error) {
-          console.error(error);
-          toast({
-              variant: "destructive",
-              title: "YouTube Search Failed",
-              description: "Could not fetch results from YouTube. Check if the API key is valid.",
-          });
-      } finally {
-          setIsSearching(false);
-      }
+      startTransition(async () => {
+          const res = await searchYoutubeAction(searchQuery);
+          if (res.error) {
+              console.error(res.error);
+              toast({
+                  variant: "destructive",
+                  title: "YouTube Search Failed",
+                  description: res.error,
+              });
+              setYoutubeResults([]);
+          } else {
+              setYoutubeResults(res.results || []);
+          }
+      });
   };
   
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -105,10 +97,10 @@ export default function SearchPage() {
           onChange={handleInputChange}
           aria-label="Search for music on YouTube"
         />
-        {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground animate-spin" />}
+        {isPending && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground animate-spin" />}
       </div>
       
-      {query && !isSearching && !hasResults && (
+      {query && !isPending && !hasResults && (
         <div className="text-center text-muted-foreground py-12">
             <p>No results found for "{query}" on YouTube.</p>
         </div>

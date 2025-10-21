@@ -1,35 +1,15 @@
 
 'use server';
 
-/**
- * @fileOverview A Genkit flow for searching YouTube for music videos.
- *
- * - searchYoutube - A function that takes a query and returns a list of YouTube video results.
- * - YoutubeSearchInput - The input type for the searchYoutube function.
- * - YoutubeSearchOutput - The output type for the searchYoutube function.
- */
-
-import { ai } from '@/ai/genkit';
-import { z } from 'zod';
 import { google } from 'googleapis';
 
-const YoutubeSearchInputSchema = z.object({
-  query: z.string().describe('The search query for YouTube.'),
-});
-export type YoutubeSearchInput = z.infer<typeof YoutubeSearchInputSchema>;
-
-const YoutubeVideoSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  artist: z.string(),
-  thumbnail: z.string(),
-  duration: z.string(),
-});
-
-const YoutubeSearchOutputSchema = z.object({
-  results: z.array(YoutubeVideoSchema),
-});
-export type YoutubeSearchOutput = z.infer<typeof YoutubeSearchOutputSchema>;
+export type YoutubeResult = {
+    id: string;
+    title: string;
+    artist: string;
+    thumbnail: string;
+    duration: string;
+}
 
 function formatDuration(duration: string): string {
     const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
@@ -47,25 +27,13 @@ function formatDuration(duration: string): string {
     return `${fmtMinutes}:${fmtSeconds.toString().padStart(2, '0')}`;
 }
 
-
-export async function searchYoutube(
-  input: YoutubeSearchInput
-): Promise<YoutubeSearchOutput> {
-  return searchYoutubeFlow(input);
-}
-
-const searchYoutubeFlow = ai.defineFlow(
-  {
-    name: 'searchYoutubeFlow',
-    inputSchema: YoutubeSearchInputSchema,
-    outputSchema: YoutubeSearchOutputSchema,
-  },
-  async ({ query }) => {
+export async function searchYoutubeAction(query: string): Promise<{ results?: YoutubeResult[], error?: string }> {
     const youtube = google.youtube('v3');
     const apiKey = process.env.YOUTUBE_API_KEY;
 
     if (!apiKey) {
-      throw new Error('YOUTUBE_API_KEY environment variable not set.');
+      console.error('YOUTUBE_API_KEY environment variable not set.');
+      return { error: 'Server configuration error: YouTube API key is missing.' };
     }
 
     try {
@@ -90,12 +58,11 @@ const searchYoutubeFlow = ai.defineFlow(
             id: videoIds,
         });
 
-        const results = videoResponse.data.items?.map(item => {
+        const results = videoResponse.data.items?.map((item): YoutubeResult => {
             const artistTitle = item.snippet?.title || 'Unknown';
             let artist = item.snippet?.channelTitle || 'Unknown Artist';
             let title = artistTitle;
 
-            // Basic attempt to split artist and title
             const separators = [' - ', ' – ', ' -- '];
             for (const sep of separators) {
                 if (artistTitle.includes(sep)) {
@@ -121,8 +88,6 @@ const searchYoutubeFlow = ai.defineFlow(
 
     } catch (e: any) {
         console.error("Error searching YouTube:", e.message);
-        // It's better to return an empty list than to throw, to avoid crashing the client app.
-        return { results: [] };
+        return { error: 'Could not fetch results from YouTube.' };
     }
-  }
-);
+}

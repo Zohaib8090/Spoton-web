@@ -1,6 +1,7 @@
 
 "use client";
 
+import { Suspense } from 'react';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase';
@@ -10,7 +11,7 @@ import { albums, playlists } from "@/lib/data";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from '@/components/ui/skeleton';
 
-export default function Home() {
+function HomePageContent() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
 
@@ -62,5 +63,13 @@ export default function Home() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HomePageContent />
+    </Suspense>
   );
 }

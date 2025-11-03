@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useState, ChangeEvent, useCallback, useTransition } from "react";
+import { useState, ChangeEvent, useCallback, useTransition, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import type { Song } from "@/lib/types";
 import { Search, Play, Loader2 } from "lucide-react";
@@ -14,14 +15,16 @@ import { searchYoutubeAction, type YoutubeResult } from "./actions";
 
 
 export default function SearchPage() {
-  const [query, setQuery] = useState("");
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get('q') || '';
+  const [query, setQuery] = useState(initialQuery);
   const [youtubeResults, setYoutubeResults] = useState<YoutubeResult[]>([]);
   const [isPending, startTransition] = useTransition();
   const { playSong, currentSong } = usePlayer();
   const { toast } = useToast();
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
-
-  const handleYoutubeSearch = (searchQuery: string) => {
+  
+  const handleYoutubeSearch = useCallback((searchQuery: string) => {
       if (searchQuery.trim().length < 2) {
           setYoutubeResults([]);
           return;
@@ -40,7 +43,13 @@ export default function SearchPage() {
               setYoutubeResults(res.results || []);
           }
       });
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    if(initialQuery) {
+        handleYoutubeSearch(initialQuery);
+    }
+  }, [initialQuery, handleYoutubeSearch]);
   
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const newQuery = e.target.value;

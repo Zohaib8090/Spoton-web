@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, ChangeEvent, useCallback, useTransition, useEffect } from "react";
+import { useState, ChangeEvent, useCallback, useTransition, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import type { Song } from "@/lib/types";
@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { searchYoutubeAction, type YoutubeResult } from "./actions";
 
 
-export default function SearchPage() {
+function SearchPageComponent() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get('q') || '';
   const [query, setQuery] = useState(initialQuery);
@@ -159,4 +159,12 @@ export default function SearchPage() {
       )}
     </div>
   );
+}
+
+export default function SearchPage() {
+    return (
+        <Suspense fallback={<div>Loading search...</div>}>
+            <SearchPageComponent />
+        </Suspense>
+    )
 }

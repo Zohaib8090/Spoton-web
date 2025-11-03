@@ -68,7 +68,11 @@ function HomePageContent() {
 
 export default function Home() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div className="space-y-8">
+        <Skeleton className="h-48 w-full" />
+        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-40 w-full" />
+      </div>}>
       <HomePageContent />
     </Suspense>
   );

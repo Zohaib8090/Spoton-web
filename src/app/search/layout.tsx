@@ -1,12 +1,12 @@
 
 "use client";
 
-import { Suspense } from 'react';
-
+// This file is intentionally left blank.
+// The search page uses Suspense boundary at the page level.
 export default function SearchLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return <Suspense>{children}</Suspense>
+  return <>{children}</>
 }

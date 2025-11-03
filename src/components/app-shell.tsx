@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Home, Search, Library, Plus, User, Bell, Settings, LogOut } from "lucide-react";
 import {
   SidebarProvider,
@@ -23,14 +23,13 @@ import { usePlayer } from "@/context/player-context";
 import { cn } from "@/lib/utils";
 import { useAuth, useUser } from "@/firebase";
 import { signOut } from "firebase/auth";
-import { useRouter } from "next/navigation";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { currentSong, handleCreatePlaylist } = usePlayer();
   const { user } = useUser();
   const auth = useAuth();
-  const router = useRouter();
 
   const handleLogout = async () => {
     if (auth) {
@@ -44,13 +43,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return pathname.startsWith(path);
   };
   
-  // Don't render the shell on login/signup pages
+  const prefetch = (href: string) => {
+    router.prefetch(href);
+  };
+
   if (pathname === '/login' || pathname === '/signup') {
     return <>{children}</>;
   }
 
   const showBottomNav = true;
-
 
   return (
     <SidebarProvider defaultOpen={true}>
@@ -64,24 +65,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <h1 className="text-lg font-bold">Spoton</h1>
               </div>
               <SidebarMenu>
-                <SidebarMenuItem>
+                <SidebarMenuItem onMouseEnter={() => prefetch('/')}>
                   <SidebarMenuButton asChild isActive={isActive('/')} className="hover:text-foreground">
                     <Link href="/"><Home /> <span>Home</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 {user && (
                   <>
-                    <SidebarMenuItem>
+                    <SidebarMenuItem onMouseEnter={() => prefetch('/profile')}>
                       <SidebarMenuButton asChild isActive={isActive('/profile')} className="hover:text-foreground">
                         <Link href="/profile"><User /> <span>View Profile</span></Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                    <SidebarMenuItem>
+                    <SidebarMenuItem onMouseEnter={() => prefetch('/whats-new')}>
                       <SidebarMenuButton asChild isActive={isActive('/whats-new')} className="hover:text-foreground">
                         <Link href="/whats-new"><Bell /> <span>What's new</span></Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                    <SidebarMenuItem>
+                    <SidebarMenuItem onMouseEnter={() => prefetch('/settings')}>
                       <SidebarMenuButton asChild isActive={isActive('/settings')} className="hover:text-foreground">
                         <Link href="/settings"><Settings /> <span>Settings</span></Link>
                       </SidebarMenuButton>
@@ -114,15 +115,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {currentSong && <Player />}
                 {showBottomNav && (
                   <nav className="bg-black border-t border-border flex justify-around items-center h-16 text-muted-foreground px-2">
-                      <Link href="/" className={cn("flex flex-col items-center gap-1 p-2 rounded-md transition-colors", isActive('/') ? "text-foreground" : "hover:text-foreground")}>
+                      <Link href="/" onMouseEnter={() => prefetch('/')} className={cn("flex flex-col items-center gap-1 p-2 rounded-md transition-colors", isActive('/') ? "text-foreground" : "hover:text-foreground")}>
                           <Home size={24} />
                           <span className="text-xs font-medium">Home</span>
                       </Link>
-                      <Link href="/search" className={cn("flex flex-col items-center gap-1 p-2 rounded-md transition-colors", isActive('/search') ? "text-foreground" : "hover:text-foreground")}>
+                      <Link href="/search" onMouseEnter={() => prefetch('/search')} className={cn("flex flex-col items-center gap-1 p-2 rounded-md transition-colors", isActive('/search') ? "text-foreground" : "hover:text-foreground")}>
                           <Search size={24} />
                           <span className="text-xs font-medium">Search</span>
                       </Link>
-                      <Link href="/library" className={cn("flex flex-col items-center gap-1 p-2 rounded-md transition-colors", isActive('/library') ? "text-foreground" : "hover:text-foreground")}>
+                      <Link href="/library" onMouseEnter={() => prefetch('/library')} className={cn("flex flex-col items-center gap-1 p-2 rounded-md transition-colors", isActive('/library') ? "text-foreground" : "hover:text-foreground")}>
                         <Library size={24} />
                         <span className="text-xs font-medium">Library</span>
                       </Link>

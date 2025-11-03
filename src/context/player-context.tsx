@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef, Dispatch, SetStateAction } from 'react';
@@ -126,6 +124,27 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const playNextRef = useRef<() => void>(() => {});
   const nextSongTriggeredRef = useRef(false);
+
+  // Load listening history from local storage on initial render
+  useEffect(() => {
+    try {
+      const savedHistory = localStorage.getItem('listeningHistory');
+      if (savedHistory) {
+        setListeningHistory(JSON.parse(savedHistory));
+      }
+    } catch (error) {
+      console.error("Could not load listening history from localStorage", error);
+    }
+  }, []);
+
+  // Save listening history to local storage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('listeningHistory', JSON.stringify(listeningHistory));
+    } catch (error) {
+      console.error("Could not save listening history to localStorage", error);
+    }
+  }, [listeningHistory]);
 
   const handleSongEnd = useCallback(() => {
     if (!nextSongTriggeredRef.current) {

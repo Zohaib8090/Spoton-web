@@ -201,6 +201,29 @@
         "streamingServiceId",
         "imageUrl"
       ]
+    },
+    "HistoryItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "History Item",
+      "type": "object",
+      "description": "Represents a single item in a user's listening history.",
+      "properties": {
+        "id": { "type": "string" },
+        "artist": { "type": "string" },
+        "title": { "type": "string" },
+        "album": { "type": "string" },
+        "albumId": { "type": "string" },
+        "albumArt": { "type": "string", "format": "uri" },
+        "duration": { "type": "string" },
+        "audioSrc": { "type": "string" },
+        "isFromYouTube": { "type": "boolean" },
+        "playedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the track was played."
+        }
+      },
+      "required": ["id", "artist", "title", "albumArt", "playedAt"]
     }
   },
   "auth": {
@@ -244,6 +267,26 @@
             {
               "name": "playlistId",
               "description": "The unique identifier of the playlist."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/history/{historyId}",
+        "definition": {
+          "entityName": "HistoryItem",
+          "schema": {
+            "$ref": "#/backend/entities/HistoryItem"
+          },
+          "description": "Stores the listening history for each user. Access is restricted to the owning user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "historyId",
+              "description": "The unique identifier for the history entry."
             }
           ]
         }

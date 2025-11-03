@@ -6,10 +6,11 @@ import { useToast } from '@/hooks/use-toast';
 import YouTube from 'react-youtube';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useDoc, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { doc, collection, addDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { doc, collection, addDoc, serverTimestamp, setDoc, query, orderBy, limit } from 'firebase/firestore';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { generatePersonalizedRecommendations } from '@/ai/flows/personalized-recommendations';
 import { searchYoutubeAction, type YoutubeResult } from '@/app/search/actions';
+import { useCollection } from '@/firebase/firestore/use-collection';
 
 type LoopMode = 'none' | 'playlist' | 'song';
 export type Quality = 'automatic' | 'high' | 'standard' | 'low' | 'very-high';
@@ -72,7 +73,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playlist, setPlaylist] = useState<Song[]>([]);
   const [shuffledPlaylist, setShuffledPlaylist] = useState<Song[]>([]);
-  const [listeningHistory, setListeningHistory] = useState<Song[]>([]);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const [youtubePlayer, setYoutubePlayer] = useState<any | null>(null);
   const [isFullScreenPlayerOpen, setIsFullScreenPlayerOpen] = useState(false);
@@ -95,6 +95,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
   const userDocRef = useMemoFirebase(() => user && firestore ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: userData } = useDoc(userDocRef);
+
+  const historyQuery = useMemoFirebase(() => 
+    user && firestore ? query(collection(firestore, 'users', user.uid, 'history'), orderBy('playedAt', 'desc'), limit(50)) : null,
+    [user, firestore]
+  );
+  const { data: listeningHistory } = useCollection<Song>(historyQuery);
 
   const [connectionType, setConnectionType] = useState<ConnectionType>('unknown');
   
@@ -124,27 +130,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const playNextRef = useRef<() => void>(() => {});
   const nextSongTriggeredRef = useRef(false);
-
-  // Load listening history from local storage on initial render
-  useEffect(() => {
-    try {
-      const savedHistory = localStorage.getItem('listeningHistory');
-      if (savedHistory) {
-        setListeningHistory(JSON.parse(savedHistory));
-      }
-    } catch (error) {
-      console.error("Could not load listening history from localStorage", error);
-    }
-  }, []);
-
-  // Save listening history to local storage whenever it changes
-  useEffect(() => {
-    try {
-      localStorage.setItem('listeningHistory', JSON.stringify(listeningHistory));
-    } catch (error) {
-      console.error("Could not save listening history to localStorage", error);
-    }
-  }, [listeningHistory]);
 
   const handleSongEnd = useCallback(() => {
     if (!nextSongTriggeredRef.current) {
@@ -307,10 +292,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         setShuffledPlaylist([song]);
     }
 
-    if (song.audioSrc && !song.audioSrc.startsWith('blob:')) {
-      setListeningHistory(prev => {
-        const newHistory = [song, ...prev.filter(s => s.id !== song.id)];
-        return newHistory.slice(0, 20);
+    if (user && firestore && song.audioSrc && !song.audioSrc.startsWith('blob:')) {
+      const historyCollection = collection(firestore, 'users', user.uid, 'history');
+      const historyDoc = {
+          ...song,
+          playedAt: serverTimestamp()
+      };
+      // We don't want to await this, just fire and forget
+      addDoc(historyCollection, historyDoc).catch(err => {
+        console.error("Failed to write to history", err);
       });
     }
     
@@ -323,7 +313,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     
     nextSongTriggeredRef.current = false;
 
-  }, [toast, shuffle, playlist, audioElement, youtubePlayer]);
+  }, [toast, shuffle, playlist, audioElement, youtubePlayer, user, firestore]);
 
   const findAndPlaySong = async (query: string) => {
     try {
@@ -377,7 +367,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         } else if (listeningControls.autoPlay) {
             toast({ title: 'Autoplay', description: 'Playing a recommended song.' });
             try {
-              const history = listeningHistory.map(s => `${s.title} - ${s.artist}`);
+              const history = (listeningHistory || []).map(s => `${s.title} - ${s.artist}`);
               const result = await generatePersonalizedRecommendations({ listeningHistory: history });
               if (result.recommendations.length > 0) {
                 await findAndPlaySong(result.recommendations[0]);
@@ -715,7 +705,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     currentSong,
     isPlaying,
     playlist,
-    listeningHistory,
+    listeningHistory: listeningHistory || [],
     playSong,
     togglePlay,
     playNext,

@@ -8,6 +8,7 @@
  * Data Structure:
  * - /users/{userId}: Stores user profile data. Access is restricted to the owning user.
  * - /users/{userId}/playlists/{playlistId}: Stores playlists created by each user. Access is restricted to the owning user.
+ * - /users/{userId}/history/{historyId}: Stores listening history. Access is restricted to the owning user.
  * - /users/{userId}/pins/{pinId}: Stores pinned items for each user. Access is restricted to the owning user.
  * - /tracks/{trackId}: Stores global track metadata. Publicly readable.
  *
@@ -42,6 +43,15 @@ service cloud.firestore {
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Manages listening history for a user.
+       * @path /users/{userId}/history/{historyId}
+       * @principle Enforces hierarchical ownership; only the user can manage their own history.
+       */
+      match /history/{historyId} {
+        allow get, list, create, update, delete: if isOwner(userId);
+      }
     }
 
     /**

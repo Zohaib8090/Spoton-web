@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
@@ -7,7 +6,7 @@ import { useEffect, useState, useRef } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlbumArtwork } from '@/components/album-artwork';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { collection } from 'firebase/firestore';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Music, FolderUp, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -21,7 +20,7 @@ export default function LibraryPage() {
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
-  const { handleCreatePlaylist, listeningHistory } = usePlayer();
+  const { handleCreatePlaylist } = usePlayer();
   const [localSongs, setLocalSongs] = useState<Song[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -30,6 +29,12 @@ export default function LibraryPage() {
     [user, firestore]
   );
   const { data: playlists, isLoading: playlistsLoading } = useCollection(playlistsQuery);
+  
+  const historyQuery = useMemoFirebase(() => 
+    user && firestore ? query(collection(firestore, 'users', user.uid, 'history'), orderBy('playedAt', 'desc'), limit(50)) : null,
+    [user, firestore]
+  );
+  const { data: listeningHistory, isLoading: historyLoading } = useCollection<Song>(historyQuery);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -68,7 +73,7 @@ export default function LibraryPage() {
   };
 
 
-  if (isUserLoading || !user || playlistsLoading) {
+  if (isUserLoading || !user || playlistsLoading || historyLoading) {
     return (
       <div className="space-y-4">
         <div className="flex justify-between items-center">
@@ -126,7 +131,7 @@ export default function LibraryPage() {
         </TabsContent>
          <TabsContent value="history">
           <div className="flex flex-col gap-2">
-            {listeningHistory.length > 0 ? (
+            {listeningHistory && listeningHistory.length > 0 ? (
               listeningHistory.map((song) => (
                 <HistoryItem key={song.id} song={song} />
               ))

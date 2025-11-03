@@ -1,13 +1,10 @@
-
 This file contains a backup of all your project's code. You can copy the contents of this file to save your work.
 
 ============================================================
 File: .env
 ============================================================
 
-```
 
-```
 
 ============================================================
 File: README.md
@@ -270,6 +267,27 @@ File: docs/backend.json
         "streamingServiceId",
         "imageUrl"
       ]
+    },
+    "HistoryItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "History Item",
+      "type": "object",
+      "description": "Represents a single item in a user's listening history.",
+      "properties": {
+        "id": { "type": "string" },
+        "artist": { "type": "string" },
+        "title": { "type": "string" },
+        "albumArt": { "type": "string", "format": "uri" },
+        "duration": { "type": "string" },
+        "audioSrc": { "type": "string" },
+        "isFromYouTube": { "type": "boolean" },
+        "playedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the track was played."
+        }
+      },
+      "required": ["id", "artist", "title", "albumArt", "playedAt"]
     }
   },
   "auth": {
@@ -318,6 +336,26 @@ File: docs/backend.json
         }
       },
       {
+        "path": "/users/{userId}/history/{historyId}",
+        "definition": {
+          "entityName": "HistoryItem",
+          "schema": {
+            "$ref": "#/backend/entities/HistoryItem"
+          },
+          "description": "Stores the listening history for each user. Access is restricted to the owning user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "historyId",
+              "description": "The unique identifier for the history entry."
+            }
+          ]
+        }
+      },
+      {
         "path": "/tracks/{trackId}",
         "definition": {
           "entityName": "Track",
@@ -335,6 +373,151 @@ File: docs/backend.json
       }
     ],
     "reasoning": "The Firestore structure is designed to manage users, playlists, and tracks, with a focus on scalability and security. User data is stored in a dedicated collection, while playlists are stored within each user's document using a subcollection. Tracks are stored in a global collection, since Tracks are not owned by users.\n\nThis design prioritizes **Authorization Independence**. Specifically, there is no `get()` call in security rules.\n\nThe design supports the required QAPs:\n\n*   **Secure Lists:**  Path-based ownership (`/users/{userId}/playlists/{playlistId}`) enables secure list operations for playlists, as rules can easily filter based on `request.auth.uid == userId`.\n\n*   **DBAC:**  Roles are derived from `request.auth.uid` and path-based ownership, precluding the need for custom claims.\n"
+  }
+}
+```
+
+============================================================
+File: firestore.rules
+============================================================
+
+```rules
+/**
+ * @fileoverview Firestore Security Rules for Spoton Music App
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for user profiles and their associated playlists and pins.
+ * Tracks are treated as global, publicly readable resources.
+ *
+ * Data Structure:
+ * - /users/{userId}: Stores user profile data. Access is restricted to the owning user.
+ * - /users/{userId}/playlists/{playlistId}: Stores playlists created by each user. Access is restricted to the owning user.
+ * - /users/{userId}/history/{historyId}: Stores listening history. Access is restricted to the owning user.
+ * - /users/{userId}/pins/{pinId}: Stores pinned items for each user. Access is restricted to the owning user.
+ * - /tracks/{trackId}: Stores global track metadata. Publicly readable.
+ *
+ * Key Security Decisions:
+ * - Users can only access their own profile data, playlists, and pinned items.
+ * - Listing other users' playlists or pins is disallowed.
+ * - Tracks are publicly readable but cannot be created, updated, or deleted through the client; these actions are reserved for backend services.
+ * - No schema validation is performed in this prototyping phase, except for ownership checks and relationship consistency.
+ *
+ * Denormalization for Authorization:
+ * - The data model inherently supports authorization independence because playlists and pins are stored within user-specific subcollections, allowing direct path-based authorization.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Manages user profile data.  Users can only read and write their own profiles.
+     * @path /users/{userId}
+     * @allow (create) User with ID 'user123' can create their profile.
+     *   request.auth.uid == 'user123' && request.resource.data.id == 'user123'
+     * @allow (get, update, delete) User with ID 'user123' can read, update, and delete their own profile.
+     *   request.auth.uid == 'user123'
+     * @deny (get, update, delete) User with ID 'user456' cannot read, update, or delete user 'user123's profile.
+     *   request.auth.uid == 'user456'
+     * @principle Enforces document ownership for writes.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false; // Disallowing listing of all users for privacy
+
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Manages listening history for a user.
+       * @path /users/{userId}/history/{historyId}
+       * @principle Enforces hierarchical ownership; only the user can manage their own history.
+       */
+      match /history/{historyId} {
+        allow get, list, create, update, delete: if isOwner(userId);
+      }
+    }
+
+    /**
+     * @description Manages playlists created by a user.  Users can only access playlists under their own user ID.
+     * @path /users/{userId}/playlists/{playlistId}
+     * @allow (create) User with ID 'user123' can create a playlist under their ID.
+     *   request.auth.uid == 'user123'
+     * @allow (get, update, delete) User with ID 'user123' can read, update, and delete a playlist under their ID.
+     *   request.auth.uid == 'user123'
+     * @deny (get, update, delete) User with ID 'user456' cannot read, update, or delete playlists under user 'user123's ID.
+     *   request.auth.uid == 'user456'
+     * @principle Enforces hierarchical ownership; only the user can manage their own playlists.
+     */
+    match /users/{userId}/playlists/{playlistId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+    
+    /**
+     * @description Manages pinned items for a user.  Users can only access pins under their own user ID.
+     * @path /users/{userId}/pins/{pinId}
+     * @allow (create) User with ID 'user123' can create a pin under their ID.
+     *   request.auth.uid == 'user123'
+     * @allow (get, update, delete) User with ID 'user123' can read, update, and delete a pin under their ID.
+     *   request.auth.uid == 'user123'
+     * @deny (get, update, delete) User with ID 'user456' cannot read, update, or delete pins under user 'user123's ID.
+     *   request.auth.uid == 'user456'
+     * @principle Enforces hierarchical ownership; only the user can manage their own pinned items.
+     */
+    match /users/{userId}/pins/{pinId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId);
+        allow update: if isExistingOwner(userId);
+        allow delete: if isExistingOwner(userId);
+    }
+
+
+    /**
+     * @description Manages track metadata.  Tracks are globally readable, but write operations are disallowed from the client.
+     * @path /tracks/{trackId}
+     * @allow (get, list) Any user can read track metadata.
+     * @deny (create, update, delete) No user can create, update, or delete tracks via the client.
+     * @principle Tracks are public read-only, with write access reserved for backend services.
+     */
+    match /tracks/{trackId} {
+      allow get, list: if true;
+      allow create, update, delete: if false;
+    }
+
+    // ------ Helper functions ------
+
+    /**
+     * @description Checks if the request is made by the owner of the resource.
+     * @param {string} userId The user ID to compare against the request's authentication UID.
+     * @return {bool} True if the request is made by the owner, false otherwise.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * @description Checks if the request is made by the owner of an existing resource.
+     * @param {string} userId The user ID to compare against the request's authentication UID.
+     * @return {bool} True if the request is made by the owner and the resource exists, false otherwise.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Checks if the user is signed in.
+     * @return {bool} True if the user is signed in, false otherwise.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
   }
 }
 ```
@@ -766,80 +949,111 @@ File: src/app/library/page.tsx
 ```tsx
 "use client";
 
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlbumArtwork } from '@/components/album-artwork';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { collection } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Music, FolderUp, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PlaylistContent } from '@/components/playlist-content';
 import type { Song } from '@/lib/types';
 import { usePlayer } from '@/context/player-context';
-import { HistoryItem } from '@/components/history-item';
+import { PlaylistTabContent } from '@/components/playlist-tab-content';
+import { HistoryTabContent } from '@/components/history-tab-content';
+
+function LocalFilesTabContent() {
+    const { toast } = useToast();
+    const [localSongs, setLocalSongs] = useState<Song[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const files = event.target.files;
+        if (!files) return;
+
+        const newSongs = Array.from(files)
+            .filter(file => file.type.startsWith('audio/') || file.type.startsWith('video/'))
+            .map((file, index) => {
+                return {
+                    id: `local-${file.name}-${index}`,
+                    title: file.name.replace(/\.[^/.]+$/, ""),
+                    artist: "Unknown Artist",
+                    album: "Local Files",
+                    albumId: "local",
+                    albumArt: "https://picsum.photos/seed/local-default/400/400",
+                    duration: "N/A",
+                    audioSrc: URL.createObjectURL(file),
+                };
+            });
+
+        setLocalSongs(currentSongs => [...currentSongs, ...newSongs]);
+        toast({
+            title: `${newSongs.length} file(s) added`,
+            description: "These files are available for this session only.",
+        });
+    };
+
+    const handleSelectFilesClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    return (
+        <div className="space-y-4">
+            <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                multiple
+                accept="audio/*,video/*"
+                className="hidden"
+            />
+            {localSongs.length === 0 ? (
+                <div className="text-center text-muted-foreground py-12 flex flex-col items-center gap-4">
+                    <Music className="h-12 w-12" />
+                    <h3 className="text-lg font-semibold">Play from your device</h3>
+                    <p className="max-w-md">Select local audio and video files to play them in the app. These files are only available for your current session and won&apos;t be saved.</p>
+                    <Button onClick={handleSelectFilesClick}>
+                        <FolderUp className="mr-2 h-4 w-4" />
+                        Select Files
+                    </Button>
+                </div>
+            ) : (
+                <div>
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-xl font-bold">Your Local Files ({localSongs.length})</h3>
+                        <Button onClick={handleSelectFilesClick} variant="outline">
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Add More Files
+                        </Button>
+                    </div>
+                    <PlaylistContent songs={localSongs} />
+                </div>
+            )}
+        </div>
+    );
+}
+
 
 export default function LibraryPage() {
   const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
   const router = useRouter();
-  const { toast } = useToast();
-  const { handleCreatePlaylist, listeningHistory } = usePlayer();
-  const [localSongs, setLocalSongs] = useState<Song[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const playlistsQuery = useMemoFirebase(() => 
-    user && firestore ? collection(firestore, 'users', user.uid, 'playlists') : null,
-    [user, firestore]
-  );
-  const { data: playlists, isLoading: playlistsLoading } = useCollection(playlistsQuery);
-
+  const { handleCreatePlaylist } = usePlayer();
+  
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
     }
   }, [user, isUserLoading, router]);
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files) return;
-
-    const newSongs = Array.from(files)
-      .filter(file => file.type.startsWith('audio/') || file.type.startsWith('video/'))
-      .map((file, index) => {
-        return {
-          id: `local-${file.name}-${index}`,
-          title: file.name.replace(/\.[^/.]+$/, ""),
-          artist: "Unknown Artist",
-          album: "Local Files",
-          albumId: "local",
-          albumArt: "https://picsum.photos/seed/local-default/400/400",
-          duration: "N/A",
-          audioSrc: URL.createObjectURL(file),
-        };
-      });
-
-    setLocalSongs(currentSongs => [...currentSongs, ...newSongs]);
-    toast({
-        title: `${newSongs.length} file(s) added`,
-        description: "These files are available for this session only.",
-    });
-  };
-
-  const handleSelectFilesClick = () => {
-    fileInputRef.current?.click();
-  };
-
-
-  if (isUserLoading || !user || playlistsLoading) {
+  if (isUserLoading || !user) {
     return (
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-            <Skeleton className="h-10 w-48" />
+            <h1 className="text-3xl font-bold tracking-tight">Library</h1>
             <Skeleton className="h-10 w-36" />
         </div>
+        <Skeleton className="h-10 w-full" />
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
           {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}
         </div>
@@ -868,75 +1082,23 @@ export default function LibraryPage() {
         </TabsList>
 
         <TabsContent value="playlists">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-4">
-            {playlists && playlists.map((playlist) => (
-              <AlbumArtwork
-                key={playlist.id}
-                album={{
-                  id: playlist.id,
-                  name: playlist.name,
-                  artist: playlist.description || 'Playlist',
-                  albumArt: playlist.coverArt,
-                  songs: [], // Songs would be fetched separately
-                }}
-                isPlaylist
-              />
-            ))}
-          </div>
-            {(!playlists || playlists.length === 0) && (
-                <div className="text-center text-muted-foreground py-12">
-                    <p>You haven&apos;t created any playlists yet.</p>
-                </div>
-            )}
+          <Suspense fallback={<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-4">
+              {[...Array(7)].map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}
+            </div>}>
+            <PlaylistTabContent />
+          </Suspense>
         </TabsContent>
-         <TabsContent value="history">
-          <div className="flex flex-col gap-2">
-            {listeningHistory.length > 0 ? (
-              listeningHistory.map((song) => (
-                <HistoryItem key={song.id} song={song} />
-              ))
-            ) : (
-              <div className="text-center text-muted-foreground py-12 flex flex-col items-center gap-4">
-                  <History className="h-12 w-12" />
-                  <h3 className="text-lg font-semibold">No Listening History</h3>
-                  <p>Songs you play will appear here.</p>
-              </div>
-            )}
-          </div>
+        
+        <TabsContent value="history">
+          <Suspense fallback={<div className="flex flex-col gap-2">
+              {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
+            </div>}>
+            <HistoryTabContent />
+          </Suspense>
         </TabsContent>
+
         <TabsContent value="local">
-           <div className="space-y-4">
-                <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileSelect}
-                    multiple
-                    accept="audio/*,video/*"
-                    className="hidden"
-                />
-                {localSongs.length === 0 ? (
-                    <div className="text-center text-muted-foreground py-12 flex flex-col items-center gap-4">
-                        <Music className="h-12 w-12" />
-                        <h3 className="text-lg font-semibold">Play from your device</h3>
-                        <p className="max-w-md">Select local audio and video files to play them in the app. These files are only available for your current session and won&apos;t be saved.</p>
-                        <Button onClick={handleSelectFilesClick}>
-                            <FolderUp className="mr-2 h-4 w-4" />
-                            Select Files
-                        </Button>
-                    </div>
-                ) : (
-                    <div>
-                        <div className="flex justify-between items-center mb-4">
-                             <h3 className="text-xl font-bold">Your Local Files ({localSongs.length})</h3>
-                             <Button onClick={handleSelectFilesClick} variant="outline">
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                Add More Files
-                            </Button>
-                        </div>
-                        <PlaylistContent songs={localSongs} />
-                    </div>
-                )}
-           </div>
+           <LocalFilesTabContent />
         </TabsContent>
         <TabsContent value="liked">
             <p className="text-muted-foreground">Liked songs will appear here. For now, this is just a placeholder.</p>
@@ -1203,6 +1365,7 @@ File: src/app/page.tsx
 ```tsx
 "use client";
 
+import { Suspense } from 'react';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase';
@@ -1212,7 +1375,7 @@ import { albums, playlists } from "@/lib/data";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from '@/components/ui/skeleton';
 
-export default function Home() {
+function HomePageContent() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
 
@@ -1264,6 +1427,18 @@ export default function Home() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="space-y-8">
+        <Skeleton className="h-48 w-full" />
+        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-40 w-full" />
+      </div>}>
+      <HomePageContent />
+    </Suspense>
   );
 }
 ```
@@ -1918,13 +2093,32 @@ export async function searchYoutubeAction(query: string): Promise<{ results?: Yo
 ```
 
 ============================================================
+File: src/app/search/layout.tsx
+============================================================
+
+```tsx
+"use client";
+
+// This file is intentionally left blank.
+// The search page uses Suspense boundary at the page level.
+export default function SearchLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return <>{children}</>
+}
+```
+
+============================================================
 File: src/app/search/page.tsx
 ============================================================
 
 ```tsx
 "use client";
 
-import { useState, ChangeEvent, useCallback, useTransition } from "react";
+import { useState, ChangeEvent, useCallback, useTransition, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import type { Song } from "@/lib/types";
 import { Search, Play, Loader2 } from "lucide-react";
@@ -1936,15 +2130,17 @@ import { cn } from "@/lib/utils";
 import { searchYoutubeAction, type YoutubeResult } from "./actions";
 
 
-export default function SearchPage() {
-  const [query, setQuery] = useState("");
+function SearchPageComponent() {
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get('q') || '';
+  const [query, setQuery] = useState(initialQuery);
   const [youtubeResults, setYoutubeResults] = useState<YoutubeResult[]>([]);
   const [isPending, startTransition] = useTransition();
   const { playSong, currentSong } = usePlayer();
   const { toast } = useToast();
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
-
-  const handleYoutubeSearch = (searchQuery: string) => {
+  
+  const handleYoutubeSearch = useCallback((searchQuery: string) => {
       if (searchQuery.trim().length < 2) {
           setYoutubeResults([]);
           return;
@@ -1963,7 +2159,13 @@ export default function SearchPage() {
               setYoutubeResults(res.results || []);
           }
       });
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    if(initialQuery) {
+        handleYoutubeSearch(initialQuery);
+    }
+  }, [initialQuery, handleYoutubeSearch]);
   
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const newQuery = e.target.value;
@@ -2073,6 +2275,14 @@ export default function SearchPage() {
       )}
     </div>
   );
+}
+
+export default function SearchPage() {
+    return (
+        <Suspense fallback={<div>Loading search...</div>}>
+            <SearchPageComponent />
+        </Suspense>
+    )
 }
 ```
 
@@ -3125,51 +3335,50 @@ File: src/components/app-provider.tsx
 ```tsx
 "use client";
 
-import { useState, useEffect } from 'react';
 import { AppShell } from '@/components/app-shell';
 import { PlayerProvider } from '@/context/player-context';
 import { Toaster } from '@/components/ui/toaster';
-import { FirebaseClientProvider } from '@/firebase';
+import { FirebaseClientProvider, useUser } from '@/firebase';
 import { ThemeProvider } from '@/context/theme-provider';
 import { PlaybackQueue } from '@/components/playback-queue';
 import { IntroLoader } from '@/components/intro-loader';
+
+function AppContent({ children }: { children: React.ReactNode }) {
+  const { isUserLoading } = useUser();
+
+  // This component will only be rendered once Firebase is initialized.
+  // We use the isUserLoading state to keep the splash screen until the user state is resolved.
+  return (
+    <>
+      <IntroLoader loading={isUserLoading} />
+      {!isUserLoading && (
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <PlayerProvider>
+            <AppShell>{children}</AppShell>
+            <PlaybackQueue />
+          </PlayerProvider>
+          <Toaster />
+        </ThemeProvider>
+      )}
+    </>
+  );
+}
+
 
 export function AppProvider({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // Hide the loader after a short delay to ensure content has started rendering.
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1500); // Show intro for 1.5 seconds
-
-    return () => clearTimeout(timer);
-  }, []);
-
   return (
-    <>
-      <IntroLoader loading={isLoading} />
-      {!isLoading && (
-        <FirebaseClientProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <PlayerProvider>
-              <AppShell>{children}</AppShell>
-              <PlaybackQueue />
-            </PlayerProvider>
-            <Toaster />
-          </ThemeProvider>
-        </FirebaseClientProvider>
-      )}
-    </>
+    <FirebaseClientProvider>
+      <AppContent>{children}</AppContent>
+    </FirebaseClientProvider>
   );
 }
 ```
@@ -3182,7 +3391,7 @@ File: src/components/app-shell.tsx
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Home, Search, Library, Plus, User, Bell, Settings, LogOut } from "lucide-react";
 import {
   SidebarProvider,
@@ -3203,14 +3412,13 @@ import { usePlayer } from "@/context/player-context";
 import { cn } from "@/lib/utils";
 import { useAuth, useUser } from "@/firebase";
 import { signOut } from "firebase/auth";
-import { useRouter } from "next/navigation";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { currentSong, handleCreatePlaylist } = usePlayer();
   const { user } = useUser();
   const auth = useAuth();
-  const router = useRouter();
 
   const handleLogout = async () => {
     if (auth) {
@@ -3224,13 +3432,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return pathname.startsWith(path);
   };
   
-  // Don't render the shell on login/signup pages
+  const prefetch = (href: string) => {
+    router.prefetch(href);
+  };
+
   if (pathname === '/login' || pathname === '/signup') {
     return <>{children}</>;
   }
 
   const showBottomNav = true;
-
 
   return (
     <SidebarProvider defaultOpen={true}>
@@ -3244,24 +3454,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <h1 className="text-lg font-bold">Spoton</h1>
               </div>
               <SidebarMenu>
-                <SidebarMenuItem>
+                <SidebarMenuItem onMouseEnter={() => prefetch('/')}>
                   <SidebarMenuButton asChild isActive={isActive('/')} className="hover:text-foreground">
                     <Link href="/"><Home /> <span>Home</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 {user && (
                   <>
-                    <SidebarMenuItem>
+                    <SidebarMenuItem onMouseEnter={() => prefetch('/profile')}>
                       <SidebarMenuButton asChild isActive={isActive('/profile')} className="hover:text-foreground">
                         <Link href="/profile"><User /> <span>View Profile</span></Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                    <SidebarMenuItem>
+                    <SidebarMenuItem onMouseEnter={() => prefetch('/whats-new')}>
                       <SidebarMenuButton asChild isActive={isActive('/whats-new')} className="hover:text-foreground">
                         <Link href="/whats-new"><Bell /> <span>What's new</span></Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                    <SidebarMenuItem>
+                    <SidebarMenuItem onMouseEnter={() => prefetch('/settings')}>
                       <SidebarMenuButton asChild isActive={isActive('/settings')} className="hover:text-foreground">
                         <Link href="/settings"><Settings /> <span>Settings</span></Link>
                       </SidebarMenuButton>
@@ -3294,15 +3504,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {currentSong && <Player />}
                 {showBottomNav && (
                   <nav className="bg-black border-t border-border flex justify-around items-center h-16 text-muted-foreground px-2">
-                      <Link href="/" className={cn("flex flex-col items-center gap-1 p-2 rounded-md transition-colors", isActive('/') ? "text-foreground" : "hover:text-foreground")}>
+                      <Link href="/" onMouseEnter={() => prefetch('/')} className={cn("flex flex-col items-center gap-1 p-2 rounded-md transition-colors", isActive('/') ? "text-foreground" : "hover:text-foreground")}>
                           <Home size={24} />
                           <span className="text-xs font-medium">Home</span>
                       </Link>
-                      <Link href="/search" className={cn("flex flex-col items-center gap-1 p-2 rounded-md transition-colors", isActive('/search') ? "text-foreground" : "hover:text-foreground")}>
+                      <Link href="/search" onMouseEnter={() => prefetch('/search')} className={cn("flex flex-col items-center gap-1 p-2 rounded-md transition-colors", isActive('/search') ? "text-foreground" : "hover:text-foreground")}>
                           <Search size={24} />
                           <span className="text-xs font-medium">Search</span>
                       </Link>
-                      <Link href="/library" className={cn("flex flex-col items-center gap-1 p-2 rounded-md transition-colors", isActive('/library') ? "text-foreground" : "hover:text-foreground")}>
+                      <Link href="/library" onMouseEnter={() => prefetch('/library')} className={cn("flex flex-col items-center gap-1 p-2 rounded-md transition-colors", isActive('/library') ? "text-foreground" : "hover:text-foreground")}>
                         <Library size={24} />
                         <span className="text-xs font-medium">Library</span>
                       </Link>
@@ -3835,11 +4045,24 @@ File: src/components/history-item.tsx
 import Image from "next/image";
 import { Play } from "lucide-react";
 import { usePlayer } from "@/context/player-context";
-import type { Song } from "@/lib/types";
+import type { Song, HistoryItem as HistoryItemType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-export function HistoryItem({ song }: { song: Song }) {
+export function HistoryItem({ song: historyItem }: { song: HistoryItemType }) {
   const { playSong, currentSong } = usePlayer();
+
+  // Reconstruct a full Song object from the HistoryItem
+  const song: Song = {
+    id: historyItem.id,
+    title: historyItem.title,
+    artist: historyItem.artist,
+    albumArt: historyItem.albumArt,
+    duration: historyItem.duration,
+    isFromYouTube: historyItem.isFromYouTube,
+    album: historyItem.album || (historyItem.isFromYouTube ? "YouTube" : "Unknown Album"),
+    albumId: historyItem.albumId || (historyItem.isFromYouTube ? "youtube" : "unknown"),
+    audioSrc: historyItem.audioSrc || (historyItem.isFromYouTube ? `youtube:${historyItem.id}`: '')
+  };
 
   return (
     <div
@@ -3871,6 +4094,49 @@ export function HistoryItem({ song }: { song: Song }) {
 ```
 
 ============================================================
+File: src/components/history-tab-content.tsx
+============================================================
+
+```tsx
+"use client";
+
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
+import type { HistoryItem as HistoryItemType } from '@/lib/types';
+import { HistoryItem } from '@/components/history-item';
+import { History } from 'lucide-react';
+
+export function HistoryTabContent() {
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const historyQuery = useMemoFirebase(() => 
+    user && firestore ? query(collection(firestore, 'users', user.uid, 'history'), orderBy('playedAt', 'desc'), limit(50)) : null,
+    [user, firestore]
+  );
+  const { data: listeningHistory } = useCollection<HistoryItemType>(historyQuery);
+
+  if (!listeningHistory || listeningHistory.length === 0) {
+    return (
+      <div className="text-center text-muted-foreground py-12 flex flex-col items-center gap-4">
+        <History className="h-12 w-12" />
+        <h3 className="text-lg font-semibold">No Listening History</h3>
+        <p>Songs you play will appear here.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {listeningHistory.map((song) => (
+        <HistoryItem key={`${song.id}-${song.playedAt?.seconds || ''}`} song={song} />
+      ))}
+    </div>
+  );
+}
+```
+
+============================================================
 File: src/components/intro-loader.tsx
 ============================================================
 
@@ -3879,8 +4145,25 @@ File: src/components/intro-loader.tsx
 
 import { SpotonLogo } from '@/components/spoton-logo';
 import { cn } from '@/lib/utils';
+import { useEffect, useState } from 'react';
 
 export function IntroLoader({ loading }: { loading: boolean }) {
+  const [shouldRender, setShouldRender] = useState(loading);
+
+  useEffect(() => {
+    if (loading) {
+      setShouldRender(true);
+    } else {
+      // Wait for the animation to finish before removing from the DOM
+      const timer = setTimeout(() => setShouldRender(false), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
+
+  if (!shouldRender) {
+    return null;
+  }
+  
   return (
     <div
       className={cn(
@@ -3911,15 +4194,17 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { generatePersonalizedRecommendations } from '@/ai/flows/personalized-recommendations';
 import { usePlayer } from '@/context/player-context';
-import { Sparkles, Loader2, Music2 } from 'lucide-react';
+import { Sparkles, Loader2, Music2, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useRouter } from 'next/navigation';
 
 export function PersonalizedRecommendations() {
   const { listeningHistory } = usePlayer();
   const [recommendations, setRecommendations] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleGetRecommendations = async () => {
     if (listeningHistory.length === 0) {
@@ -3934,7 +4219,9 @@ export function PersonalizedRecommendations() {
     setIsLoading(true);
     setRecommendations([]);
     try {
-      const result = await generatePersonalizedRecommendations({ listeningHistory });
+      // Format the listening history into an array of strings as expected by the AI flow.
+      const historyAsStrings = listeningHistory.map(song => `${song.title} by ${song.artist}`);
+      const result = await generatePersonalizedRecommendations({ listeningHistory: historyAsStrings });
       setRecommendations(result.recommendations);
     } catch (error) {
       console.error("Failed to get recommendations:", error);
@@ -3946,6 +4233,10 @@ export function PersonalizedRecommendations() {
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  const handleSearchRecommendation = (recommendation: string) => {
+    router.push(`/search?q=${encodeURIComponent(recommendation)}`);
   };
 
   return (
@@ -3972,9 +4263,14 @@ export function PersonalizedRecommendations() {
             <h3 className="text-lg font-semibold">Here are some tracks you might like:</h3>
             <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
                 {recommendations.map((rec, index) => (
-                    <li key={index} className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
-                        <Music2 className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{rec}</span>
+                    <li key={index} className="flex items-center justify-between gap-2 p-2 rounded-md bg-muted/50">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <Music2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <span className="text-sm truncate">{rec}</span>
+                        </div>
+                         <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => handleSearchRecommendation(rec)}>
+                            <Search className="h-4 w-4" />
+                        </Button>
                     </li>
                 ))}
             </ul>
@@ -4502,6 +4798,55 @@ export function PlaylistContent({ songs }: { songs: Song[] }) {
       })}
     </div>
   )
+}
+```
+
+============================================================
+File: src/components/playlist-tab-content.tsx
+============================================================
+
+```tsx
+"use client";
+
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { AlbumArtwork } from '@/components/album-artwork';
+
+export function PlaylistTabContent() {
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const playlistsQuery = useMemoFirebase(() => 
+    user && firestore ? collection(firestore, 'users', user.uid, 'playlists') : null,
+    [user, firestore]
+  );
+  const { data: playlists } = useCollection(playlistsQuery);
+
+  if (!playlists || playlists.length === 0) {
+    return (
+      <div className="text-center text-muted-foreground py-12">
+        <p>You haven&apos;t created any playlists yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-4">
+      {playlists.map((playlist) => (
+        <AlbumArtwork
+          key={playlist.id}
+          album={{
+            id: playlist.id,
+            name: playlist.name,
+            artist: playlist.description || 'Playlist',
+            albumArt: playlist.coverArt,
+            songs: [], // Songs would be fetched separately
+          }}
+          isPlaylist
+        />
+      ))}
+    </div>
+  );
 }
 ```
 
@@ -8503,15 +8848,16 @@ File: src/context/player-context.tsx
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef, Dispatch, SetStateAction } from 'react';
-import type { Song } from '@/lib/types';
+import type { Song, HistoryItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import YouTube from 'react-youtube';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useDoc, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { doc, collection, addDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { doc, collection, addDoc, serverTimestamp, setDoc, query, orderBy, limit } from 'firebase/firestore';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { generatePersonalizedRecommendations } from '@/ai/flows/personalized-recommendations';
 import { searchYoutubeAction, type YoutubeResult } from '@/app/search/actions';
+import { useCollection } from '@/firebase/firestore/use-collection';
 
 type LoopMode = 'none' | 'playlist' | 'song';
 export type Quality = 'automatic' | 'high' | 'standard' | 'low' | 'very-high';
@@ -8536,7 +8882,7 @@ interface PlayerContextType {
   currentSong: Song | null;
   isPlaying: boolean;
   playlist: Song[];
-  listeningHistory: Song[];
+  listeningHistory: HistoryItem[];
   isFullScreenPlayerOpen: boolean;
   isQueueOpen: boolean;
   shuffle: boolean;
@@ -8574,7 +8920,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playlist, setPlaylist] = useState<Song[]>([]);
   const [shuffledPlaylist, setShuffledPlaylist] = useState<Song[]>([]);
-  const [listeningHistory, setListeningHistory] = useState<Song[]>([]);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const [youtubePlayer, setYoutubePlayer] = useState<any | null>(null);
   const [isFullScreenPlayerOpen, setIsFullScreenPlayerOpen] = useState(false);
@@ -8597,6 +8942,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
   const userDocRef = useMemoFirebase(() => user && firestore ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: userData } = useDoc(userDocRef);
+
+  const historyQuery = useMemoFirebase(() => 
+    user && firestore ? query(collection(firestore, 'users', user.uid, 'history'), orderBy('playedAt', 'desc'), limit(50)) : null,
+    [user, firestore]
+  );
+  const { data: listeningHistory } = useCollection<HistoryItem>(historyQuery);
 
   const [connectionType, setConnectionType] = useState<ConnectionType>('unknown');
   
@@ -8788,10 +9139,22 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         setShuffledPlaylist([song]);
     }
 
-    if (song.audioSrc && !song.audioSrc.startsWith('blob:')) {
-      setListeningHistory(prev => {
-        const newHistory = [song, ...prev.filter(s => s.id !== song.id)];
-        return newHistory.slice(0, 20);
+    if (user && firestore && song.audioSrc && !song.audioSrc.startsWith('blob:')) {
+      const historyCollection = collection(firestore, 'users', user.uid, 'history');
+      const historyDoc: Omit<HistoryItem, 'playedAt'> = {
+          id: song.id,
+          title: song.title,
+          artist: song.artist,
+          albumArt: song.albumArt,
+          duration: song.duration,
+          isFromYouTube: song.isFromYouTube || false,
+          album: song.album,
+          albumId: song.albumId,
+          audioSrc: song.audioSrc,
+      };
+      
+      addDoc(historyCollection, { ...historyDoc, playedAt: serverTimestamp() }).catch(err => {
+        console.error("Failed to write to history", err);
       });
     }
     
@@ -8804,7 +9167,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     
     nextSongTriggeredRef.current = false;
 
-  }, [toast, shuffle, playlist, audioElement, youtubePlayer]);
+  }, [toast, shuffle, playlist, audioElement, youtubePlayer, user, firestore]);
 
   const findAndPlaySong = async (query: string) => {
     try {
@@ -8858,7 +9221,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         } else if (listeningControls.autoPlay) {
             toast({ title: 'Autoplay', description: 'Playing a recommended song.' });
             try {
-              const history = listeningHistory.map(s => `${s.title} - ${s.artist}`);
+              const history = (listeningHistory || []).map(s => `${s.title} - ${s.artist}`);
               const result = await generatePersonalizedRecommendations({ listeningHistory: history });
               if (result.recommendations.length > 0) {
                 await findAndPlaySong(result.recommendations[0]);
@@ -9196,7 +9559,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     currentSong,
     isPlaying,
     playlist,
-    listeningHistory,
+    listeningHistory: listeningHistory || [],
     playSong,
     togglePlay,
     playNext,
@@ -10623,6 +10986,21 @@ export interface Playlist {
   songs: Song[];
   coverArt: string;
   userId?: string;
+  trackIds?: string[];
+}
+
+export interface HistoryItem {
+    id: string;
+    artist: string;
+    title: string;
+    albumArt: string;
+    duration: string;
+    isFromYouTube: boolean;
+    playedAt: any; // Firestore ServerTimestamp
+    // Optional fields for reconstruction
+    album?: string;
+    albumId?: string;
+    audioSrc?: string;
 }
 ```
 
@@ -10778,5 +11156,3 @@ File: tsconfig.json
   "exclude": ["node_modules"]
 }
 ```
-
-    

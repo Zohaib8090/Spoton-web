@@ -1,50 +1,48 @@
-
 "use client";
 
-import { useState, useEffect } from 'react';
 import { AppShell } from '@/components/app-shell';
 import { PlayerProvider } from '@/context/player-context';
 import { Toaster } from '@/components/ui/toaster';
-import { FirebaseClientProvider } from '@/firebase';
+import { FirebaseClientProvider, useUser } from '@/firebase';
 import { ThemeProvider } from '@/context/theme-provider';
 import { PlaybackQueue } from '@/components/playback-queue';
 import { IntroLoader } from '@/components/intro-loader';
+
+function AppContent({ children }: { children: React.ReactNode }) {
+  const { isUserLoading } = useUser();
+
+  // This component will only be rendered once Firebase is initialized.
+  // We use the isUserLoading state to keep the splash screen until the user state is resolved.
+  return (
+    <>
+      <IntroLoader loading={isUserLoading} />
+      {!isUserLoading && (
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <PlayerProvider>
+            <AppShell>{children}</AppShell>
+            <PlaybackQueue />
+          </PlayerProvider>
+          <Toaster />
+        </ThemeProvider>
+      )}
+    </>
+  );
+}
+
 
 export function AppProvider({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // Hide the loader after a short delay to ensure content has started rendering.
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1500); // Show intro for 1.5 seconds
-
-    return () => clearTimeout(timer);
-  }, []);
-
   return (
-    <>
-      <IntroLoader loading={isLoading} />
-      {!isLoading && (
-        <FirebaseClientProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <PlayerProvider>
-              <AppShell>{children}</AppShell>
-              <PlaybackQueue />
-            </PlayerProvider>
-            <Toaster />
-          </ThemeProvider>
-        </FirebaseClientProvider>
-      )}
-    </>
+    <FirebaseClientProvider>
+      <AppContent>{children}</AppContent>
+    </FirebaseClientProvider>
   );
 }

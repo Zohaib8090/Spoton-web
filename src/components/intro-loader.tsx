@@ -1,10 +1,26 @@
-
 'use client';
 
 import { SpotonLogo } from '@/components/spoton-logo';
 import { cn } from '@/lib/utils';
+import { useEffect, useState } from 'react';
 
 export function IntroLoader({ loading }: { loading: boolean }) {
+  const [shouldRender, setShouldRender] = useState(loading);
+
+  useEffect(() => {
+    if (loading) {
+      setShouldRender(true);
+    } else {
+      // Wait for the animation to finish before removing from the DOM
+      const timer = setTimeout(() => setShouldRender(false), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
+
+  if (!shouldRender) {
+    return null;
+  }
+  
   return (
     <div
       className={cn(

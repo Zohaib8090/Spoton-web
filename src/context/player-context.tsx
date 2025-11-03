@@ -159,9 +159,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     
     if (!audioSourceRef.current || audioSourceRef.current.mediaElement !== audioElement) {
         try {
-          audioSourceRef.current = audioContext.createMediaElementSource(audioElement);
+          // Check if the source is already connected to the context
+          if (!audioSourceRef.current) {
+             audioSourceRef.current = audioContext.createMediaElementSource(audioElement);
+          }
         } catch(e) {
-            return; // Already connected or other error
+            // This can happen on hot reloads if the element is already associated
+            return;
         }
     }
     let lastNode: AudioNode = audioSourceRef.current;
@@ -405,6 +409,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const togglePlay = useCallback(() => {
     if (currentSong) {
+       // Ensure AudioContext is running
+      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume();
+      }
       setIsPlaying(prev => !prev);
     }
   }, [currentSong]);
@@ -773,3 +781,5 @@ export function usePlayer(): PlayerContextType {
   }
   return context;
 }
+
+    

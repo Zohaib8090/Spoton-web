@@ -211,8 +211,6 @@
         "id": { "type": "string" },
         "artist": { "type": "string" },
         "title": { "type": "string" },
-        "album": { "type": "string" },
-        "albumId": { "type": "string" },
         "albumArt": { "type": "string", "format": "uri" },
         "duration": { "type": "string" },
         "audioSrc": { "type": "string" },

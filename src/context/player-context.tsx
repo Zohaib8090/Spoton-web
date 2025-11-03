@@ -1,7 +1,8 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef, Dispatch, SetStateAction } from 'react';
-import type { Song } from '@/lib/types';
+import type { Song, HistoryItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import YouTube from 'react-youtube';
 import { cn } from '@/lib/utils';
@@ -35,7 +36,7 @@ interface PlayerContextType {
   currentSong: Song | null;
   isPlaying: boolean;
   playlist: Song[];
-  listeningHistory: Song[];
+  listeningHistory: HistoryItem[];
   isFullScreenPlayerOpen: boolean;
   isQueueOpen: boolean;
   shuffle: boolean;
@@ -100,7 +101,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     user && firestore ? query(collection(firestore, 'users', user.uid, 'history'), orderBy('playedAt', 'desc'), limit(50)) : null,
     [user, firestore]
   );
-  const { data: listeningHistory } = useCollection<Song>(historyQuery);
+  const { data: listeningHistory } = useCollection<HistoryItem>(historyQuery);
 
   const [connectionType, setConnectionType] = useState<ConnectionType>('unknown');
   
@@ -294,12 +295,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     if (user && firestore && song.audioSrc && !song.audioSrc.startsWith('blob:')) {
       const historyCollection = collection(firestore, 'users', user.uid, 'history');
-      const historyDoc = {
-          ...song,
-          playedAt: serverTimestamp()
+      const historyDoc: Omit<HistoryItem, 'playedAt'> = {
+          id: song.id,
+          title: song.title,
+          artist: song.artist,
+          albumArt: song.albumArt,
+          duration: song.duration,
+          isFromYouTube: song.isFromYouTube || false,
+          album: song.album,
+          albumId: song.albumId,
+          audioSrc: song.audioSrc,
       };
-      // We don't want to await this, just fire and forget
-      addDoc(historyCollection, historyDoc).catch(err => {
+      
+      addDoc(historyCollection, { ...historyDoc, playedAt: serverTimestamp() }).catch(err => {
         console.error("Failed to write to history", err);
       });
     }

@@ -1,3 +1,4 @@
+
 export interface Song {
   id: string;
   artist: string;
@@ -25,4 +26,19 @@ export interface Playlist {
   songs: Song[];
   coverArt: string;
   userId?: string;
+  trackIds?: string[];
+}
+
+export interface HistoryItem {
+    id: string;
+    artist: string;
+    title: string;
+    albumArt: string;
+    duration: string;
+    isFromYouTube: boolean;
+    playedAt: any; // Firestore ServerTimestamp
+    // Optional fields for reconstruction
+    album?: string;
+    albumId?: string;
+    audioSrc?: string;
 }

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
@@ -11,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { PlusCircle, Music, FolderUp, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PlaylistContent } from '@/components/playlist-content';
-import type { Song } from '@/lib/types';
+import type { Song, HistoryItem as HistoryItemType } from '@/lib/types';
 import { usePlayer } from '@/context/player-context';
 import { HistoryItem } from '@/components/history-item';
 
@@ -34,7 +35,7 @@ export default function LibraryPage() {
     user && firestore ? query(collection(firestore, 'users', user.uid, 'history'), orderBy('playedAt', 'desc'), limit(50)) : null,
     [user, firestore]
   );
-  const { data: listeningHistory, isLoading: historyLoading } = useCollection<Song>(historyQuery);
+  const { data: listeningHistory, isLoading: historyLoading } = useCollection<HistoryItemType>(historyQuery);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -133,7 +134,7 @@ export default function LibraryPage() {
           <div className="flex flex-col gap-2">
             {listeningHistory && listeningHistory.length > 0 ? (
               listeningHistory.map((song) => (
-                <HistoryItem key={song.id} song={song} />
+                <HistoryItem key={`${song.id}-${song.playedAt}`} song={song} />
               ))
             ) : (
               <div className="text-center text-muted-foreground py-12 flex flex-col items-center gap-4">

@@ -4,11 +4,24 @@
 import Image from "next/image";
 import { Play } from "lucide-react";
 import { usePlayer } from "@/context/player-context";
-import type { Song } from "@/lib/types";
+import type { Song, HistoryItem as HistoryItemType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-export function HistoryItem({ song }: { song: Song }) {
+export function HistoryItem({ song: historyItem }: { song: HistoryItemType }) {
   const { playSong, currentSong } = usePlayer();
+
+  // Reconstruct a full Song object from the HistoryItem
+  const song: Song = {
+    id: historyItem.id,
+    title: historyItem.title,
+    artist: historyItem.artist,
+    albumArt: historyItem.albumArt,
+    duration: historyItem.duration,
+    isFromYouTube: historyItem.isFromYouTube,
+    album: historyItem.album || (historyItem.isFromYouTube ? "YouTube" : "Unknown Album"),
+    albumId: historyItem.albumId || (historyItem.isFromYouTube ? "youtube" : "unknown"),
+    audioSrc: historyItem.audioSrc || (historyItem.isFromYouTube ? `youtube:${historyItem.id}`: '')
+  };
 
   return (
     <div

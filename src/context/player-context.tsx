@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import YouTube from 'react-youtube';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useDoc, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { doc, collection, addDoc, serverTimestamp, setDoc, query, orderBy, limit } from 'firebase/firestore';
+import { doc, collection, addDoc, serverTimestamp, setDoc, query, orderBy, limit, writeBatch, deleteDoc } from 'firebase/firestore';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { generatePersonalizedRecommendations } from '@/ai/flows/personalized-recommendations';
 import { searchYoutubeAction, type YoutubeResult } from '@/app/search/actions';
@@ -64,6 +64,7 @@ interface PlayerContextType {
   toggleShuffle: () => void;
   toggleLoop: () => void;
   handleCreatePlaylist: () => void;
+  deletePlaylists: (playlistIds: string[]) => Promise<void>;
   seek: (percentage: number) => void;
 }
 
@@ -717,6 +718,28 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       });
   };
 
+  const deletePlaylists = async (playlistIds: string[]) => {
+    if (!user || !firestore) return;
+
+    const batch = writeBatch(firestore);
+    playlistIds.forEach(id => {
+      const docRef = doc(firestore, 'users', user.uid, 'playlists', id);
+      batch.delete(docRef);
+    });
+
+    try {
+      await batch.commit();
+    } catch (error: any) {
+       toast({
+        variant: "destructive",
+        title: "Error deleting playlists",
+        description: error.message,
+      });
+      // Optionally re-throw or handle more gracefully
+      throw error;
+    }
+  };
+
   const value: PlayerContextType = {
     currentSong,
     isPlaying,
@@ -748,6 +771,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     isEqEnabled,
     toggleEq,
     handleCreatePlaylist,
+    deletePlaylists,
     seek,
     equaliserSettings
   };

@@ -5,7 +5,13 @@ import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebas
 import { collection } from 'firebase/firestore';
 import { AlbumArtwork } from '@/components/album-artwork';
 
-export function PlaylistTabContent() {
+interface PlaylistTabContentProps {
+  isSelectionMode?: boolean;
+  selectedPlaylists?: string[];
+  onPlaylistSelect?: (playlistId: string, isSelected: boolean) => void;
+}
+
+export function PlaylistTabContent({ isSelectionMode, selectedPlaylists, onPlaylistSelect }: PlaylistTabContentProps) {
   const { user } = useUser();
   const firestore = useFirestore();
 
@@ -36,8 +42,13 @@ export function PlaylistTabContent() {
             songs: [], // Songs would be fetched separately
           }}
           isPlaylist
+          isSelectionMode={isSelectionMode}
+          isSelected={selectedPlaylists?.includes(playlist.id)}
+          onSelect={onPlaylistSelect}
         />
       ))}
     </div>
   );
 }
+
+    

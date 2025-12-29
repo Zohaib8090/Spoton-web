@@ -7,13 +7,14 @@ import { useEffect, useState, useRef, Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Music, FolderUp, History } from 'lucide-react';
+import { PlusCircle, Music, FolderUp, History, Trash2, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PlaylistContent } from '@/components/playlist-content';
 import type { Song } from '@/lib/types';
 import { usePlayer } from '@/context/player-context';
 import { PlaylistTabContent } from '@/components/playlist-tab-content';
 import { HistoryTabContent } from '@/components/history-tab-content';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 function LocalFilesTabContent() {
     const { toast } = useToast();
@@ -90,13 +91,46 @@ function LocalFilesTabContent() {
 export default function LibraryPage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
-  const { handleCreatePlaylist } = usePlayer();
+  const { handleCreatePlaylist, deletePlaylists } = usePlayer();
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedPlaylists, setSelectedPlaylists] = useState<string[]>([]);
+  const { toast } = useToast();
   
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
     }
   }, [user, isUserLoading, router]);
+
+  const handleToggleSelectionMode = () => {
+    setIsSelectionMode(!isSelectionMode);
+    setSelectedPlaylists([]);
+  }
+
+  const handlePlaylistSelect = (playlistId: string, isSelected: boolean) => {
+    setSelectedPlaylists(prev => 
+      isSelected ? [...prev, playlistId] : prev.filter(id => id !== playlistId)
+    );
+  }
+
+  const handleDeleteSelected = async () => {
+    if (selectedPlaylists.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No playlists selected",
+        description: "Please select at least one playlist to delete.",
+      });
+      return;
+    }
+    
+    await deletePlaylists(selectedPlaylists);
+    toast({
+      title: "Playlists Deleted",
+      description: `${selectedPlaylists.length} playlist(s) have been removed.`,
+    });
+    setIsSelectionMode(false);
+    setSelectedPlaylists([]);
+  };
 
   if (isUserLoading || !user) {
     return (
@@ -117,10 +151,46 @@ export default function LibraryPage() {
     <div className="space-y-6">
         <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold tracking-tight">Library</h1>
-            <Button onClick={handleCreatePlaylist}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Create Playlist
-            </Button>
+             <div className="flex gap-2">
+                {isSelectionMode ? (
+                  <>
+                    <Button variant="ghost" onClick={handleToggleSelectionMode}>
+                        <XCircle className="mr-2 h-4 w-4" /> Cancel
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" disabled={selectedPlaylists.length === 0}>
+                            <Trash2 className="mr-2 h-4 w-4" /> Delete ({selectedPlaylists.length})
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                          <AlertDialogHeader>
+                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete {selectedPlaylists.length} playlist(s).
+                              </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleDeleteSelected}>
+                                  Delete
+                              </AlertDialogAction>
+                          </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="outline" onClick={handleToggleSelectionMode}>
+                        <Trash2 className="mr-2 h-4 w-4" /> Remove Playlist
+                    </Button>
+                    <Button onClick={handleCreatePlaylist}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Create Playlist
+                    </Button>
+                  </>
+                )}
+            </div>
         </div>
       
       <Tabs defaultValue="playlists" className="space-y-6">
@@ -137,7 +207,11 @@ export default function LibraryPage() {
           <Suspense fallback={<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-4">
               {[...Array(7)].map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}
             </div>}>
-            <PlaylistTabContent />
+            <PlaylistTabContent 
+              isSelectionMode={isSelectionMode}
+              selectedPlaylists={selectedPlaylists}
+              onPlaylistSelect={handlePlaylistSelect}
+            />
           </Suspense>
         </TabsContent>
         
@@ -165,3 +239,5 @@ export default function LibraryPage() {
     </div>
   );
 }
+
+    

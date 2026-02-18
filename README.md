@@ -2,6 +2,7 @@
 
 This is a Next.js application built with Firebase Studio.
 ## Our website https://spoton-web-lime.vercel.app/
+https://energetic-purpose-142389.framer.app/
 ## Running Locally on Windows
 
 To run this application on your local machine, you'll need to have [Node.js](https://nodejs.org/) installed. Then, follow these steps:

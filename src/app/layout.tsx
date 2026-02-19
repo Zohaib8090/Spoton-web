@@ -6,6 +6,9 @@ import { AppProvider } from '@/components/app-provider';
 export const metadata: Metadata = {
   title: 'Spoton',
   description: 'Your personal music streaming companion.',
+  verification: {
+    google: 'P-OtPbyJ9SQSh8EiNf3kzJWCwkCPDWFXo8VEAYaTPBY',
+  },
 };
 
 export default function RootLayout({

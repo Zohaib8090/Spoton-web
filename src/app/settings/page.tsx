@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { BellRing, Video, Music, Wifi, Signal, Youtube, Mail, GitBranch, Play, Speaker, Equalizer, Ear, Headphones, Volume2 } from 'lucide-react';
+import { BellRing, Video, Music, Wifi, Signal, Youtube, Mail, GitBranch, Play, Speaker, Sliders, Ear, Headphones, Volume2 } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
@@ -25,8 +25,8 @@ export default function SettingsPage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
-  
-  const userDocRef = useMemoFirebase(() => 
+
+  const userDocRef = useMemoFirebase(() =>
     user && firestore ? doc(firestore, 'users', user.uid) : null,
     [user, firestore]
   );
@@ -35,7 +35,7 @@ export default function SettingsPage() {
   const [notificationPermission, setNotificationPermission] = useState(
     typeof window !== 'undefined' ? Notification.permission : 'default'
   );
-  
+
   const [notificationPrefs, setNotificationPrefs] = useState({
     newReleases: true,
     playlistUpdates: false,
@@ -45,7 +45,7 @@ export default function SettingsPage() {
     audio: { wifi: 'automatic', cellular: 'automatic' },
     video: { wifi: 'standard', cellular: 'standard' }
   });
-  
+
   const [streamingServices, setStreamingServices] = useState({
     youtubeMusic: true,
   });
@@ -55,7 +55,7 @@ export default function SettingsPage() {
     automix: false,
     crossfade: 0,
   });
-  
+
   const [listeningControls, setListeningControls] = useState({
     autoPlay: true,
     monoAudio: false,
@@ -63,7 +63,7 @@ export default function SettingsPage() {
     volumeNormalization: true,
     balance: 0,
   });
-  
+
   const [isEqDialogOpen, setIsEqDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -80,7 +80,7 @@ export default function SettingsPage() {
       }));
     }
     if (userData?.settings?.streamingServices) {
-        setStreamingServices(userData.settings.streamingServices);
+      setStreamingServices(userData.settings.streamingServices);
     }
     if (userData?.settings?.trackTransitions) {
       setTrackTransitions(userData.settings.trackTransitions);
@@ -95,20 +95,20 @@ export default function SettingsPage() {
     const settingsUpdate = { settings: { [key]: value } };
     setDoc(userDocRef, settingsUpdate, { merge: true })
       .catch(() => {
-          const permissionError = new FirestorePermissionError({
-            path: userDocRef.path,
-            operation: 'update',
-            requestResourceData: settingsUpdate,
-          });
-          errorEmitter.emit('permission-error', permissionError);
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Failed to save your settings.",
-          });
+        const permissionError = new FirestorePermissionError({
+          path: userDocRef.path,
+          operation: 'update',
+          requestResourceData: settingsUpdate,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to save your settings.",
+        });
       });
   }, [userDocRef, toast]);
-  
+
   const handleThemeChange = (isDarkMode: boolean) => {
     const newTheme = isDarkMode ? 'dark' : 'light';
     setTheme(newTheme);
@@ -126,7 +126,7 @@ export default function SettingsPage() {
     setStreamingServices(newServices);
     updateSetting('streamingServices', newServices);
   };
-  
+
   const handlePlaybackQualityChange = (
     type: 'audio' | 'video',
     connection: 'wifi' | 'cellular',
@@ -148,7 +148,7 @@ export default function SettingsPage() {
     setTrackTransitions(newTransitions);
     updateSetting('trackTransitions', newTransitions);
   };
-  
+
   const handleCrossfadeChange = (value: number[]) => {
     const newTransitions = { ...trackTransitions, crossfade: value[0] };
     setTrackTransitions(newTransitions);
@@ -162,9 +162,9 @@ export default function SettingsPage() {
   };
 
   const handleBalanceChange = (value: number[]) => {
-      const newControls = { ...listeningControls, balance: value[0] };
-      setListeningControls(newControls);
-      updateSetting('listeningControls', newControls);
+    const newControls = { ...listeningControls, balance: value[0] };
+    setListeningControls(newControls);
+    updateSetting('listeningControls', newControls);
   };
 
 
@@ -179,7 +179,7 @@ export default function SettingsPage() {
     }
 
     if (notificationPermission === 'granted') {
-       toast({
+      toast({
         title: "Permissions",
         description: "You have already enabled notifications.",
       });
@@ -209,18 +209,18 @@ export default function SettingsPage() {
         <Skeleton className="h-8 w-48" />
         <div className="space-y-6">
           {[...Array(4)].map((_, i) => (
-             <Card key={i}>
-                <CardHeader><Skeleton className="h-6 w-1/3" /></CardHeader>
-                <CardContent>
-                    <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
-                        <div className="space-y-2">
-                           <Skeleton className="h-5 w-24" />
-                           <Skeleton className="h-4 w-48" />
-                        </div>
-                        <Skeleton className="h-6 w-12 rounded-full" />
-                    </div>
-                </CardContent>
-             </Card>
+            <Card key={i}>
+              <CardHeader><Skeleton className="h-6 w-1/3" /></CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+                  <div className="space-y-2">
+                    <Skeleton className="h-5 w-24" />
+                    <Skeleton className="h-4 w-48" />
+                  </div>
+                  <Skeleton className="h-6 w-12 rounded-full" />
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </div>
@@ -228,7 +228,7 @@ export default function SettingsPage() {
   }
 
   const getPermissionStatusText = () => {
-    switch(notificationPermission) {
+    switch (notificationPermission) {
       case 'granted':
         return 'Permissions granted';
       case 'denied':
@@ -237,7 +237,7 @@ export default function SettingsPage() {
         return 'Enable browser notifications';
     }
   }
-  
+
   const qualityOptions = [
     { value: 'automatic', label: 'Automatic' },
     { value: 'very-high', label: 'Very High' },
@@ -250,7 +250,7 @@ export default function SettingsPage() {
     <>
       <div className="space-y-8">
         <h1 className="text-3xl font-bold">Settings</h1>
-        
+
         <Card>
           <CardHeader>
             <CardTitle>Streaming Services</CardTitle>
@@ -267,8 +267,8 @@ export default function SettingsPage() {
                   </span>
                 </div>
               </Label>
-              <Switch 
-                id="youtube-music" 
+              <Switch
+                id="youtube-music"
                 checked={streamingServices.youtubeMusic}
                 onCheckedChange={(checked) => handleStreamingServiceChange('youtubeMusic', checked)}
               />
@@ -289,7 +289,7 @@ export default function SettingsPage() {
                   {getPermissionStatusText()}
                 </span>
               </Label>
-              <Button 
+              <Button
                 id="browser-notifications"
                 onClick={handleNotificationPermission}
                 disabled={notificationPermission === 'granted'}
@@ -305,11 +305,11 @@ export default function SettingsPage() {
                   Get notified about new music from artists you follow.
                 </span>
               </Label>
-              <Switch 
-                id="new-releases" 
+              <Switch
+                id="new-releases"
                 checked={notificationPrefs.newReleases}
                 onCheckedChange={(checked) => handleNotificationPrefChange('newReleases', checked)}
-                disabled={notificationPermission !== 'granted'} 
+                disabled={notificationPermission !== 'granted'}
               />
             </div>
             <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
@@ -319,11 +319,11 @@ export default function SettingsPage() {
                   Get notified when playlists you follow are updated.
                 </span>
               </Label>
-              <Switch 
-                id="playlist-updates" 
+              <Switch
+                id="playlist-updates"
                 checked={notificationPrefs.playlistUpdates}
                 onCheckedChange={(checked) => handleNotificationPrefChange('playlistUpdates', checked)}
-                disabled={notificationPermission !== 'granted'} 
+                disabled={notificationPermission !== 'granted'}
               />
             </div>
           </CardContent>
@@ -342,8 +342,8 @@ export default function SettingsPage() {
                   Automatically play similar songs when your music ends.
                 </span>
               </Label>
-              <Switch 
-                id="auto-play" 
+              <Switch
+                id="auto-play"
                 checked={listeningControls.autoPlay}
                 onCheckedChange={(checked) => handleListeningControlChange('autoPlay', checked)}
               />
@@ -355,34 +355,34 @@ export default function SettingsPage() {
                   Makes the left and right speakers play the same audio.
                 </span>
               </Label>
-              <Switch 
-                id="mono-audio" 
+              <Switch
+                id="mono-audio"
                 checked={listeningControls.monoAudio}
                 onCheckedChange={(checked) => handleListeningControlChange('monoAudio', checked)}
               />
             </div>
             <div className="space-y-3 rounded-lg border p-4">
-                <Label htmlFor="balance" className="flex flex-col space-y-1">
-                    <span>Audio Balance</span>
-                    <span className="font-normal leading-snug text-muted-foreground">
-                        Adjust the audio output between left and right channels.
-                    </span>
-                </Label>
-                 <div className="relative pt-2">
-                    <Slider
-                        id="balance"
-                        min={-1}
-                        max={1}
-                        step={0.1}
-                        value={[listeningControls.balance]}
-                        onValueChange={handleBalanceChange}
-                    />
-                    <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                        <span className="w-4 text-center">L</span>
-                        <span>Center</span>
-                        <span className="w-4 text-center">R</span>
-                    </div>
+              <Label htmlFor="balance" className="flex flex-col space-y-1">
+                <span>Audio Balance</span>
+                <span className="font-normal leading-snug text-muted-foreground">
+                  Adjust the audio output between left and right channels.
+                </span>
+              </Label>
+              <div className="relative pt-2">
+                <Slider
+                  id="balance"
+                  min={-1}
+                  max={1}
+                  step={0.1}
+                  value={[listeningControls.balance]}
+                  onValueChange={handleBalanceChange}
+                />
+                <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                  <span className="w-4 text-center">L</span>
+                  <span>Center</span>
+                  <span className="w-4 text-center">R</span>
                 </div>
+              </div>
             </div>
             <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
               <Label htmlFor="equaliser" className="flex flex-col space-y-1">
@@ -400,158 +400,158 @@ export default function SettingsPage() {
                   Set the same volume level for all tracks.
                 </span>
               </Label>
-              <Switch 
-                id="volume-normalization" 
+              <Switch
+                id="volume-normalization"
                 checked={listeningControls.volumeNormalization}
                 onCheckedChange={(checked) => handleListeningControlChange('volumeNormalization', checked)}
               />
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader>
             <CardTitle>Playback</CardTitle>
             <CardDescription>Adjust your streaming quality and transitions.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-              <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                      <Music className="h-5 w-5 text-muted-foreground" />
-                      <h3 className="font-semibold">Audio Quality</h3>
-                  </div>
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Wifi size={16}/>
-                        <span>Wi-Fi Streaming</span>
-                      </div>
-                      <RadioGroup 
-                        value={playbackQuality.audio.wifi} 
-                        onValueChange={(value) => handlePlaybackQualityChange('audio', 'wifi', value)} 
-                      >
-                        {qualityOptions.map(option => (
-                          <Label key={`aq-w-${option.value}`} className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
-                            {option.label}
-                            <RadioGroupItem value={option.value} id={`aq-w-${option.value}`} />
-                          </Label>
-                        ))}
-                      </RadioGroup>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Signal size={16}/>
-                        <span>Cellular Streaming</span>
-                      </div>
-                      <RadioGroup 
-                        value={playbackQuality.audio.cellular} 
-                        onValueChange={(value) => handlePlaybackQualityChange('audio', 'cellular', value)}
-                      >
-                        {qualityOptions.map(option => (
-                          <Label key={`aq-c-${option.value}`} className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
-                            {option.label}
-                            <RadioGroupItem value={option.value} id={`aq-c-${option.value}`} />
-                          </Label>
-                        ))}
-                      </RadioGroup>
-                    </div>
-                  </div>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Music className="h-5 w-5 text-muted-foreground" />
+                <h3 className="font-semibold">Audio Quality</h3>
               </div>
-              <Separator />
-              <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                      <Video className="h-5 w-5 text-muted-foreground" />
-                      <h3 className="font-semibold">Video Quality</h3>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Wifi size={16} />
+                    <span>Wi-Fi Streaming</span>
                   </div>
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Wifi size={16}/>
-                        <span>Wi-Fi Streaming</span>
-                      </div>
-                      <RadioGroup 
-                        value={playbackQuality.video.wifi} 
-                        onValueChange={(value) => handlePlaybackQualityChange('video', 'wifi', value)}
-                      >
-                        {qualityOptions.map(option => (
-                          <Label key={`vq-w-${option.value}`} className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
-                            {option.label}
-                            <RadioGroupItem value={option.value} id={`vq-w-${option.value}`} />
-                          </Label>
-                        ))}
-                      </RadioGroup>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Signal size={16}/>
-                        <span>Cellular Streaming</span>
-                      </div>
-                      <RadioGroup 
-                        value={playbackQuality.video.cellular} 
-                        onValueChange={(value) => handlePlaybackQualityChange('video', 'cellular', value)}
-                      >
-                        {qualityOptions.map(option => (
-                          <Label key={`vq-c-${option.value}`} className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
-                            {option.label}
-                            <RadioGroupItem value={option.value} id={`vq-c-${option.value}`} />
-                          </Label>
-                        ))}
-                      </RadioGroup>
-                    </div>
-                  </div>
-              </div>
-              <Separator />
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                    <GitBranch className="h-5 w-5 text-muted-foreground" />
-                    <h3 className="font-semibold">Track Transitions</h3>
-                </div>
-                <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
-                  <Label htmlFor="gapless-playback" className="flex flex-col space-y-1">
-                    <span>Gapless Playback</span>
-                    <span className="font-normal leading-snug text-muted-foreground">
-                      Allow gapless playback between songs.
-                    </span>
-                  </Label>
-                  <Switch 
-                    id="gapless-playback" 
-                    checked={trackTransitions.gaplessPlayback}
-                    onCheckedChange={(checked) => handleTrackTransitionChange('gaplessPlayback', checked)}
-                  />
-                </div>
-                <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
-                  <Label htmlFor="automix" className="flex flex-col space-y-1">
-                    <span>Automix</span>
-                    <span className="font-normal leading-snug text-muted-foreground">
-                      Allow smooth transitions between songs.
-                    </span>
-                  </Label>
-                  <Switch 
-                    id="automix" 
-                    checked={trackTransitions.automix}
-                    onCheckedChange={(checked) => handleTrackTransitionChange('automix', checked)}
-                  />
-                </div>
-                <div className="space-y-3 rounded-lg border p-4">
-                  <div className="flex items-center justify-between">
-                      <Label htmlFor="crossfade" className="flex flex-col space-y-1">
-                      <span>Crossfade</span>
-                      <span className="font-normal leading-snug text-muted-foreground">
-                          Fade out the current song as the next one fades in.
-                      </span>
+                  <RadioGroup
+                    value={playbackQuality.audio.wifi}
+                    onValueChange={(value) => handlePlaybackQualityChange('audio', 'wifi', value)}
+                  >
+                    {qualityOptions.map(option => (
+                      <Label key={`aq-w-${option.value}`} className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
+                        {option.label}
+                        <RadioGroupItem value={option.value} id={`aq-w-${option.value}`} />
                       </Label>
-                      <span className="text-sm font-bold w-12 text-right">{trackTransitions.crossfade}s</span>
+                    ))}
+                  </RadioGroup>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Signal size={16} />
+                    <span>Cellular Streaming</span>
                   </div>
-                  <Slider
-                    id="crossfade"
-                    min={0}
-                    max={12}
-                    step={1}
-                    value={[trackTransitions.crossfade]}
-                    onValueChange={handleCrossfadeChange}
-                  />
+                  <RadioGroup
+                    value={playbackQuality.audio.cellular}
+                    onValueChange={(value) => handlePlaybackQualityChange('audio', 'cellular', value)}
+                  >
+                    {qualityOptions.map(option => (
+                      <Label key={`aq-c-${option.value}`} className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
+                        {option.label}
+                        <RadioGroupItem value={option.value} id={`aq-c-${option.value}`} />
+                      </Label>
+                    ))}
+                  </RadioGroup>
                 </div>
               </div>
+            </div>
+            <Separator />
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Video className="h-5 w-5 text-muted-foreground" />
+                <h3 className="font-semibold">Video Quality</h3>
+              </div>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Wifi size={16} />
+                    <span>Wi-Fi Streaming</span>
+                  </div>
+                  <RadioGroup
+                    value={playbackQuality.video.wifi}
+                    onValueChange={(value) => handlePlaybackQualityChange('video', 'wifi', value)}
+                  >
+                    {qualityOptions.map(option => (
+                      <Label key={`vq-w-${option.value}`} className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
+                        {option.label}
+                        <RadioGroupItem value={option.value} id={`vq-w-${option.value}`} />
+                      </Label>
+                    ))}
+                  </RadioGroup>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Signal size={16} />
+                    <span>Cellular Streaming</span>
+                  </div>
+                  <RadioGroup
+                    value={playbackQuality.video.cellular}
+                    onValueChange={(value) => handlePlaybackQualityChange('video', 'cellular', value)}
+                  >
+                    {qualityOptions.map(option => (
+                      <Label key={`vq-c-${option.value}`} className="flex items-center justify-between rounded-lg border p-3 cursor-pointer has-[:checked]:border-primary">
+                        {option.label}
+                        <RadioGroupItem value={option.value} id={`vq-c-${option.value}`} />
+                      </Label>
+                    ))}
+                  </RadioGroup>
+                </div>
+              </div>
+            </div>
+            <Separator />
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <GitBranch className="h-5 w-5 text-muted-foreground" />
+                <h3 className="font-semibold">Track Transitions</h3>
+              </div>
+              <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+                <Label htmlFor="gapless-playback" className="flex flex-col space-y-1">
+                  <span>Gapless Playback</span>
+                  <span className="font-normal leading-snug text-muted-foreground">
+                    Allow gapless playback between songs.
+                  </span>
+                </Label>
+                <Switch
+                  id="gapless-playback"
+                  checked={trackTransitions.gaplessPlayback}
+                  onCheckedChange={(checked) => handleTrackTransitionChange('gaplessPlayback', checked)}
+                />
+              </div>
+              <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+                <Label htmlFor="automix" className="flex flex-col space-y-1">
+                  <span>Automix</span>
+                  <span className="font-normal leading-snug text-muted-foreground">
+                    Allow smooth transitions between songs.
+                  </span>
+                </Label>
+                <Switch
+                  id="automix"
+                  checked={trackTransitions.automix}
+                  onCheckedChange={(checked) => handleTrackTransitionChange('automix', checked)}
+                />
+              </div>
+              <div className="space-y-3 rounded-lg border p-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="crossfade" className="flex flex-col space-y-1">
+                    <span>Crossfade</span>
+                    <span className="font-normal leading-snug text-muted-foreground">
+                      Fade out the current song as the next one fades in.
+                    </span>
+                  </Label>
+                  <span className="text-sm font-bold w-12 text-right">{trackTransitions.crossfade}s</span>
+                </div>
+                <Slider
+                  id="crossfade"
+                  min={0}
+                  max={12}
+                  step={1}
+                  value={[trackTransitions.crossfade]}
+                  onValueChange={handleCrossfadeChange}
+                />
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -576,7 +576,7 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader>
             <CardTitle>Developer Support</CardTitle>

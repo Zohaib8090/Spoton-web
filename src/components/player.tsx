@@ -42,7 +42,7 @@ export function Player() {
   const [touchStartY, setTouchStartY] = useState(0);
   const [touchDeltaY, setTouchDeltaY] = useState(0);
   const playerRef = useRef<HTMLDivElement>(null);
-  const progressUpdateRef = useRef<number>();
+  const progressUpdateRef = useRef<number | undefined>(undefined);
 
 
   const formatTime = (time: number) => {
@@ -116,7 +116,7 @@ export function Player() {
     setTouchStartY(0);
     setTouchDeltaY(0);
   };
-  
+
   const displayDuration = currentSong?.duration !== "0:00" ? currentSong?.duration : duration;
 
   return (
@@ -129,9 +129,9 @@ export function Player() {
       onTouchEnd={handleTouchEnd}
     >
       <div className="grid grid-cols-[auto_1fr_auto] items-center gap-4">
-        <div 
-            className="flex items-center gap-3 w-64 min-w-0 cursor-pointer"
-            onClick={toggleFullScreenPlayer}
+        <div
+          className="flex items-center gap-3 w-64 min-w-0 cursor-pointer"
+          onClick={toggleFullScreenPlayer}
         >
           {currentSong ? (
             <>
@@ -141,42 +141,42 @@ export function Player() {
                 width={56}
                 height={56}
                 quality={100}
-                className="rounded-md"
+                className="rounded-md h-12 w-12 sm:h-14 sm:w-14"
                 data-ai-hint="album cover"
                 unoptimized={currentSong.isFromYouTube}
               />
               <div className="truncate">
-                <p className="font-semibold text-sm truncate hover:underline cursor-pointer">{currentSong.title}</p>
-                <p className="text-xs text-muted-foreground truncate hover:underline cursor-pointer">{currentSong.artist}</p>
+                <p className="font-semibold text-xs sm:text-sm truncate hover:underline cursor-pointer">{currentSong.title}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate hover:underline cursor-pointer">{currentSong.artist}</p>
               </div>
-              <Button variant="ghost" size="icon" className="hidden sm:inline-flex text-accent">
+              <Button variant="ghost" size="icon" className="hidden lg:inline-flex text-accent">
                 <Heart className="h-4 w-4 fill-current" />
               </Button>
             </>
           ) : (
-             <div className="h-[56px] flex items-center text-muted-foreground"></div>
+            <div className="h-[56px] flex items-center text-muted-foreground"></div>
           )}
         </div>
 
         <div className="flex flex-col items-center justify-center gap-1 w-full max-w-2xl mx-auto">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 sm:gap-4">
             <Button variant="ghost" size="icon" onClick={playPrev} disabled={!currentSong} className="text-muted-foreground hover:text-foreground">
-              <SkipBack size={20} className="fill-current" />
+              <SkipBack size={18} className="fill-current" />
             </Button>
             <Button
               size="icon"
-              className="w-8 h-8 rounded-full bg-foreground text-background hover:bg-white/90"
+              className="w-10 h-10 sm:w-8 sm:h-8 rounded-full bg-foreground text-background hover:bg-white/90 shrink-0"
               onClick={togglePlay}
               disabled={!currentSong}
             >
               {isPlaying ? (
-                <Pause size={16} className="fill-current" />
+                <Pause size={20} className="sm:size-16 fill-current" />
               ) : (
-                <Play size={16} className="fill-current ml-0.5" />
+                <Play size={20} className="sm:size-16 fill-current ml-0.5" />
               )}
             </Button>
             <Button variant="ghost" size="icon" onClick={playNext} disabled={!currentSong} className="text-muted-foreground hover:text-foreground">
-              <SkipForward size={20} className="fill-current" />
+              <SkipForward size={18} className="fill-current" />
             </Button>
           </div>
           <div className="w-full flex items-center gap-2">
@@ -193,12 +193,12 @@ export function Player() {
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 w-64">
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={toggleQueue}><Mic2 size={18}/></Button>
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={toggleQueue}><ListMusic size={18}/></Button>
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><Laptop2 size={18}/></Button>
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><Volume2 size={18}/></Button>
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={toggleFullScreenPlayer}><Maximize2 size={18}/></Button>
+        <div className="flex items-center justify-end gap-1 sm:gap-2 w-auto sm:w-64">
+          <Button variant="ghost" size="icon" className="hidden lg:inline-flex text-muted-foreground hover:text-foreground" onClick={toggleQueue}><Mic2 size={18} /></Button>
+          <Button variant="ghost" size="icon" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground" onClick={toggleQueue}><ListMusic size={18} /></Button>
+          <Button variant="ghost" size="icon" className="hidden lg:inline-flex text-muted-foreground hover:text-foreground"><Laptop2 size={18} /></Button>
+          <Button variant="ghost" size="icon" className="hidden md:inline-flex text-muted-foreground hover:text-foreground"><Volume2 size={18} /></Button>
+          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={toggleFullScreenPlayer}><Maximize2 size={18} /></Button>
         </div>
       </div>
     </div>
@@ -206,4 +206,4 @@ export function Player() {
 }
 
 
-    
+

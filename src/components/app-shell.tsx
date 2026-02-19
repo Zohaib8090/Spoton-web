@@ -37,12 +37,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
     router.push('/login');
   };
-  
+
   const isActive = (path: string) => {
     if (path === '/') return pathname === '/';
     return pathname.startsWith(path);
   };
-  
+
   const prefetch = (href: string) => {
     router.prefetch(href);
   };
@@ -102,8 +102,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SidebarInset>
           <div className="flex flex-col h-full">
             <main className={cn("flex-1 overflow-y-auto p-4 md:p-6 lg:p-8", {
-              "pb-36": currentSong,
-              "pb-20": !currentSong,
+              "pb-40": currentSong,
+              "pb-24": !currentSong,
+              "md:pb-36": currentSong,
+              "md:pb-20": !currentSong,
             })}>
               <div className="flex items-center gap-4">
                 <SidebarTrigger />
@@ -112,27 +114,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {children}
             </main>
             <div className="fixed bottom-0 left-0 right-0 z-50 md:left-[var(--sidebar-width-icon)]">
-                {currentSong && <Player />}
-                {showBottomNav && (
-                  <nav className="bg-black border-t border-border flex justify-around items-center h-16 text-muted-foreground px-2">
-                      <Link href="/" onMouseEnter={() => prefetch('/')} className={cn("flex flex-col items-center gap-1 p-2 rounded-md transition-colors", isActive('/') ? "text-foreground" : "hover:text-foreground")}>
-                          <Home size={24} />
-                          <span className="text-xs font-medium">Home</span>
-                      </Link>
-                      <Link href="/search" onMouseEnter={() => prefetch('/search')} className={cn("flex flex-col items-center gap-1 p-2 rounded-md transition-colors", isActive('/search') ? "text-foreground" : "hover:text-foreground")}>
-                          <Search size={24} />
-                          <span className="text-xs font-medium">Search</span>
-                      </Link>
-                      <Link href="/library" onMouseEnter={() => prefetch('/library')} className={cn("flex flex-col items-center gap-1 p-2 rounded-md transition-colors", isActive('/library') ? "text-foreground" : "hover:text-foreground")}>
-                        <Library size={24} />
-                        <span className="text-xs font-medium">Library</span>
-                      </Link>
-                      <Button variant="ghost" onClick={handleCreatePlaylist} className="flex flex-col items-center gap-1 h-auto p-2 hover:text-foreground">
-                        <Plus size={24} />
-                        <span className="text-xs font-medium">Create Playlist</span>
-                      </Button>
-                  </nav>
-                )}
+              {currentSong && <Player />}
+              {showBottomNav && (
+                <nav className="bg-black/80 backdrop-blur-lg border-t border-border flex justify-around items-center h-16 text-muted-foreground px-2">
+                  <Link href="/" onMouseEnter={() => prefetch('/')} className={cn("flex flex-col items-center gap-1 p-2 rounded-md transition-colors", isActive('/') ? "text-foreground" : "hover:text-foreground")}>
+                    <Home size={20} />
+                    <span className="text-[10px] sm:text-xs font-medium">Home</span>
+                  </Link>
+                  <Link href="/search" onMouseEnter={() => prefetch('/search')} className={cn("flex flex-col items-center gap-1 p-2 rounded-md transition-colors", isActive('/search') ? "text-foreground" : "hover:text-foreground")}>
+                    <Search size={20} />
+                    <span className="text-[10px] sm:text-xs font-medium">Search</span>
+                  </Link>
+                  <Link href="/library" onMouseEnter={() => prefetch('/library')} className={cn("flex flex-col items-center gap-1 p-2 rounded-md transition-colors", isActive('/library') ? "text-foreground" : "hover:text-foreground")}>
+                    <Library size={20} />
+                    <span className="text-[10px] sm:text-xs font-medium">Library</span>
+                  </Link>
+                  <Button variant="ghost" onClick={handleCreatePlaylist} className="flex flex-col items-center gap-1 h-auto p-2 hover:text-foreground">
+                    <Plus size={20} />
+                    <span className="text-[10px] sm:text-xs font-medium">Create Playlist</span>
+                  </Button>
+                </nav>
+              )}
             </div>
             {currentSong && <FullScreenPlayer />}
           </div>

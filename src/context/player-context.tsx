@@ -17,8 +17,8 @@ type LoopMode = 'none' | 'playlist' | 'song';
 export type Quality = 'automatic' | 'high' | 'standard' | 'low' | 'very-high';
 export type ConnectionType = 'wifi' | 'cellular' | 'unknown';
 export type PlaybackQualitySettings = {
-    audio: Record<'wifi' | 'cellular', Quality>;
-    video: Record<'wifi' | 'cellular', Quality>;
+  audio: Record<'wifi' | 'cellular', Quality>;
+  video: Record<'wifi' | 'cellular', Quality>;
 };
 
 
@@ -85,7 +85,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [isLyricsLoading, setIsLyricsLoading] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  
+
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const pannerNodeRef = useRef<StereoPannerNode | null>(null);
@@ -98,28 +98,28 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const userDocRef = useMemoFirebase(() => user && firestore ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: userData } = useDoc(userDocRef);
 
-  const historyQuery = useMemoFirebase(() => 
+  const historyQuery = useMemoFirebase(() =>
     user && firestore ? query(collection(firestore, 'users', user.uid, 'history'), orderBy('playedAt', 'desc'), limit(50)) : null,
     [user, firestore]
   );
   const { data: listeningHistory } = useCollection<HistoryItem>(historyQuery);
 
   const [connectionType, setConnectionType] = useState<ConnectionType>('unknown');
-  
+
   const playbackQualitySettings: PlaybackQualitySettings = userData?.settings?.playbackQuality || {
     audio: { wifi: 'automatic', cellular: 'standard' },
     video: { wifi: 'standard', cellular: 'standard' },
   };
-  
+
   const listeningControls = userData?.settings?.listeningControls || {
-      volumeNormalization: true,
-      autoPlay: true,
-      monoAudio: false,
-      equaliserEnabled: false,
-      balance: 0,
+    volumeNormalization: true,
+    autoPlay: true,
+    monoAudio: false,
+    equaliserEnabled: false,
+    balance: 0,
   };
   const trackTransitions = userData?.settings?.trackTransitions || { gaplessPlayback: true, automix: false, crossfade: 0 };
-  
+
   const [equaliserSettings, _setEqualiserSettings] = useState<number[]>(userData?.settings?.equaliser || DEFAULT_EQ_SETTINGS);
   const [isEqEnabled, setIsEqEnabled] = useState(listeningControls.equaliserEnabled);
 
@@ -130,12 +130,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     currentSongRef.current = currentSong;
   }, [currentSong]);
 
-  const playNextRef = useRef<() => void>(() => {});
+  const playNextRef = useRef<() => void>(() => { });
   const nextSongTriggeredRef = useRef(false);
 
   const handleSongEnd = useCallback(() => {
     if (!nextSongTriggeredRef.current) {
-        playNextRef.current();
+      playNextRef.current();
     }
   }, []);
 
@@ -157,24 +157,24 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
     const audioContext = audioContextRef.current;
-    
+
     if (!audioSourceRef.current || audioSourceRef.current.mediaElement !== audioElement) {
-        try {
-          // Check if the source is already connected to the context
-          if (!audioSourceRef.current) {
-             audioSourceRef.current = audioContext.createMediaElementSource(audioElement);
-          }
-        } catch(e) {
-            // This can happen on hot reloads if the element is already associated
-            return;
+      try {
+        // Check if the source is already connected to the context
+        if (!audioSourceRef.current) {
+          audioSourceRef.current = audioContext.createMediaElementSource(audioElement);
         }
+      } catch (e) {
+        // This can happen on hot reloads if the element is already associated
+        return;
+      }
     }
     let lastNode: AudioNode = audioSourceRef.current;
 
     // Disconnect previous nodes to rebuild the chain
     try {
       lastNode.disconnect();
-    } catch(e) { /* ignore */ }
+    } catch (e) { /* ignore */ }
 
     // Equaliser setup
     if (isEqEnabled) {
@@ -189,25 +189,25 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           return filter;
         });
       } else {
-         eqNodesRef.current.forEach((filter, i) => {
-             filter.gain.value = currentEqSettings[i];
-         });
+        eqNodesRef.current.forEach((filter, i) => {
+          filter.gain.value = currentEqSettings[i];
+        });
       }
       eqNodesRef.current.forEach(filter => {
         lastNode.connect(filter);
         lastNode = filter;
       });
     }
-    
+
     // Panner setup for both mono and balance
     if (!pannerNodeRef.current) {
-        pannerNodeRef.current = audioContext.createStereoPanner();
+      pannerNodeRef.current = audioContext.createStereoPanner();
     }
     const balance = listeningControls.balance;
     pannerNodeRef.current.pan.value = typeof balance === 'number' && isFinite(balance) ? balance : 0;
     lastNode.connect(pannerNodeRef.current);
     lastNode = pannerNodeRef.current;
-    
+
     lastNode.connect(audioContext.destination);
 
   }, [audioElement, isEqEnabled, listeningControls, equaliserSettings]);
@@ -215,29 +215,29 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setupAudioContext();
   }, [setupAudioContext]);
-  
+
   useEffect(() => {
     setIsEqEnabled(listeningControls.equaliserEnabled);
   }, [listeningControls.equaliserEnabled]);
-  
+
   useEffect(() => {
-      _setEqualiserSettings(userData?.settings?.equaliser || DEFAULT_EQ_SETTINGS);
+    _setEqualiserSettings(userData?.settings?.equaliser || DEFAULT_EQ_SETTINGS);
   }, [userData?.settings?.equaliser]);
 
   const setEqualiserSettings = (settings: number[]) => {
     _setEqualiserSettings(settings);
-    if(userDocRef) {
+    if (userDocRef) {
       setDoc(userDocRef, { settings: { equaliser: settings } }, { merge: true });
     }
     eqNodesRef.current.forEach((filter, i) => {
-      if(filter) filter.gain.value = settings[i];
+      if (filter) filter.gain.value = settings[i];
     });
   };
 
   const toggleEq = () => {
     const newEqState = !isEqEnabled;
     setIsEqEnabled(newEqState);
-    if(userDocRef) {
+    if (userDocRef) {
       setDoc(userDocRef, { settings: { listeningControls: { equaliserEnabled: newEqState } } }, { merge: true });
     }
     setupAudioContext();
@@ -258,32 +258,32 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     };
     updateConnectionType();
     if ('connection' in navigator) {
-        const connection = (navigator as any).connection;
-        connection.addEventListener('change', updateConnectionType);
-        return () => connection.removeEventListener('change', updateConnectionType);
+      const connection = (navigator as any).connection;
+      connection.addEventListener('change', updateConnectionType);
+      return () => connection.removeEventListener('change', updateConnectionType);
     }
   }, []);
 
   const playSong = useCallback((song: Song, newPlaylist?: Song[], isAutoplay: boolean = false) => {
     if (youtubePlayer && typeof youtubePlayer.stopVideo === 'function' && youtubePlayer.getIframe?.()?.src) {
-        youtubePlayer.stopVideo();
+      youtubePlayer.stopVideo();
     }
     if (audioElement) {
-        audioElement.pause();
+      audioElement.pause();
     }
 
     if (fadeIntervalRef.current) {
-        clearInterval(fadeIntervalRef.current);
-        fadeIntervalRef.current = null;
+      clearInterval(fadeIntervalRef.current);
+      fadeIntervalRef.current = null;
     }
 
     if (audioElement && audioElement.src && audioElement.src.startsWith('blob:')) {
       URL.revokeObjectURL(audioElement.src);
     }
-    
+
     setCurrentSong(song);
     setIsPlaying(true);
-    
+
     if (newPlaylist && newPlaylist.length > 0) {
       const isDifferentPlaylist = JSON.stringify(newPlaylist) !== JSON.stringify(playlist);
       if (isDifferentPlaylist) {
@@ -294,36 +294,36 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         }
       }
     } else if (!newPlaylist || newPlaylist.length === 0) {
-        setPlaylist([song]);
-        setShuffledPlaylist([song]);
+      setPlaylist([song]);
+      setShuffledPlaylist([song]);
     }
 
     if (user && firestore && song.audioSrc && !song.audioSrc.startsWith('blob:')) {
       const historyCollection = collection(firestore, 'users', user.uid, 'history');
       const historyDoc: Omit<HistoryItem, 'playedAt'> = {
-          id: song.id,
-          title: song.title,
-          artist: song.artist,
-          albumArt: song.albumArt,
-          duration: song.duration,
-          isFromYouTube: song.isFromYouTube || false,
-          album: song.album,
-          albumId: song.albumId,
-          audioSrc: song.audioSrc,
+        id: song.id,
+        title: song.title,
+        artist: song.artist,
+        albumArt: song.albumArt,
+        duration: song.duration,
+        isFromYouTube: song.isFromYouTube || false,
+        album: song.album,
+        albumId: song.albumId,
+        audioSrc: song.audioSrc,
       };
-      
+
       addDoc(historyCollection, { ...historyDoc, playedAt: serverTimestamp() }).catch(err => {
         console.error("Failed to write to history", err);
       });
     }
-    
+
     if (!isAutoplay) {
-        toast({
-            title: "Now Playing",
-            description: `${song.title} by ${song.artist}`,
-        });
+      toast({
+        title: "Now Playing",
+        description: `${song.title} by ${song.artist}`,
+      });
     }
-    
+
     nextSongTriggeredRef.current = false;
 
   }, [toast, shuffle, playlist, audioElement, youtubePlayer, user, firestore]);
@@ -360,15 +360,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     if (loop === 'song') {
       if (currentSong.isFromYouTube && youtubePlayer && typeof youtubePlayer.seekTo === 'function' && typeof youtubePlayer.playVideo === 'function' && youtubePlayer.getIframe?.()) {
-          youtubePlayer.seekTo(0);
-          youtubePlayer.playVideo();
+        youtubePlayer.seekTo(0);
+        youtubePlayer.playVideo();
       } else if (audioElement) {
-          audioElement.currentTime = 0;
-          audioElement.play();
+        audioElement.currentTime = 0;
+        audioElement.play();
       }
       return;
     }
-      
+
     const currentIndex = activePlaylist.findIndex(song => song.id === currentSong.id);
 
     if (currentIndex !== -1) {
@@ -378,29 +378,29 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           nextIndex = 0;
           playSong(activePlaylist[nextIndex], playlist);
         } else if (listeningControls.autoPlay) {
-            toast({ title: 'Autoplay', description: 'Playing a recommended song.' });
-            try {
-              const history = (listeningHistory || []).map(s => `${s.title} - ${s.artist}`);
-              const result = await generatePersonalizedRecommendations({ listeningHistory: history });
-              if (result.recommendations.length > 0) {
-                await findAndPlaySong(result.recommendations[0]);
-              } else {
-                setIsPlaying(false);
-              }
-            } catch (error) {
-              console.error("Failed to get recommendations for autoplay:", error);
+          toast({ title: 'Autoplay', description: 'Playing a recommended song.' });
+          try {
+            const history = (listeningHistory || []).map(s => `${s.title} - ${s.artist}`);
+            const result = await generatePersonalizedRecommendations({ listeningHistory: history });
+            if (result.recommendations.length > 0) {
+              await findAndPlaySong(result.recommendations[0]);
+            } else {
               setIsPlaying(false);
             }
+          } catch (error) {
+            console.error("Failed to get recommendations for autoplay:", error);
+            setIsPlaying(false);
+          }
         } else {
           setIsPlaying(false);
         }
-        return; 
+        return;
       }
-       if (trackTransitions.gaplessPlayback || trackTransitions.automix) {
-           playSong(activePlaylist[nextIndex], playlist);
-       } else {
-          setTimeout(() => playSong(activePlaylist[nextIndex], playlist), 1000);
-       }
+      if (trackTransitions.gaplessPlayback || trackTransitions.automix) {
+        playSong(activePlaylist[nextIndex], playlist);
+      } else {
+        setTimeout(() => playSong(activePlaylist[nextIndex], playlist), 1000);
+      }
     }
   }, [currentSong, playlist, shuffledPlaylist, shuffle, loop, playSong, audioElement, youtubePlayer, listeningControls.autoPlay, listeningHistory, toast, trackTransitions]);
 
@@ -410,7 +410,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const togglePlay = useCallback(() => {
     if (currentSong) {
-       // Ensure AudioContext is running
+      // Ensure AudioContext is running
       if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
         audioContextRef.current.resume();
       }
@@ -428,7 +428,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       playSong(activePlaylist[prevIndex], playlist);
     }
   }, [currentSong, playlist, shuffledPlaylist, playSong, shuffle]);
-  
+
   const seek = (percentage: number) => {
     if (currentSong?.isFromYouTube && youtubePlayer?.getDuration) {
       const newTime = (percentage / 100) * youtubePlayer.getDuration();
@@ -448,7 +448,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           { src: currentSong?.albumArt || '', sizes: '512x512', type: 'image/png' },
         ]
       });
-  
+
       navigator.mediaSession.setActionHandler('play', () => togglePlay());
       navigator.mediaSession.setActionHandler('pause', () => togglePlay());
       navigator.mediaSession.setActionHandler('previoustrack', () => playPrev());
@@ -458,7 +458,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if ('mediaSession' in navigator) {
-        navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
     }
   }, [isPlaying]);
 
@@ -471,20 +471,21 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (youtubePlayer && typeof youtubePlayer.getIframe === 'function' && youtubePlayer.getIframe()) {
       const isVideo = showVideo;
-      const qualitySetting = isVideo ? playbackQualitySettings.video[connectionType] : playbackQualitySettings.audio[connectionType];
-      
+      const safeConnectionType = (connectionType === 'unknown' ? 'cellular' : connectionType) as 'wifi' | 'cellular';
+      const qualitySetting = isVideo ? playbackQualitySettings.video[safeConnectionType] : playbackQualitySettings.audio[safeConnectionType];
+
       let quality: string;
-      switch(qualitySetting) {
-          case 'very-high': quality = 'highres'; break;
-          case 'high': quality = 'hd1080'; break;
-          case 'standard': quality = 'hd720'; break;
-          case 'low': quality = 'large'; break;
-          default: quality = 'default';
+      switch (qualitySetting) {
+        case 'very-high': quality = 'highres'; break;
+        case 'high': quality = 'hd1080'; break;
+        case 'standard': quality = 'hd720'; break;
+        case 'low': quality = 'large'; break;
+        default: quality = 'default';
       }
       youtubePlayer.setPlaybackQuality(quality);
     }
   }, [playbackQualitySettings, youtubePlayer, showVideo, connectionType]);
-  
+
   useEffect(() => {
     if (fadeIntervalRef.current) return;
 
@@ -493,93 +494,93 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (youtubePlayer && typeof youtubePlayer.setVolume === 'function' && youtubePlayer.getIframe?.()) {
       youtubePlayer.setVolume(baseVolume * 100);
     }
-    
+
   }, [listeningControls.volumeNormalization, audioElement, youtubePlayer, currentSong]);
 
   const updateProgress = useCallback(() => {
     if (!audioElement || !currentSong) return;
 
     if (trackTransitions.automix && trackTransitions.crossfade > 0 && !currentSong.isFromYouTube) {
-        const timeLeft = audioElement.duration - audioElement.currentTime;
-        const baseVolume = listeningControls.volumeNormalization ? 0.8 : 1;
+      const timeLeft = audioElement.duration - audioElement.currentTime;
+      const baseVolume = listeningControls.volumeNormalization ? 0.8 : 1;
 
-        if (timeLeft <= trackTransitions.crossfade) {
-            const volume = (timeLeft / trackTransitions.crossfade) * baseVolume;
-            audioElement.volume = Math.max(0, volume);
+      if (timeLeft <= trackTransitions.crossfade) {
+        const volume = (timeLeft / trackTransitions.crossfade) * baseVolume;
+        audioElement.volume = Math.max(0, volume);
 
-            if (!nextSongTriggeredRef.current) {
-                const activePlaylist = shuffle ? shuffledPlaylist : playlist;
-                const currentIndex = activePlaylist.findIndex(s => s.id === currentSong.id);
-                const nextIndex = (currentIndex + 1) % activePlaylist.length;
-                if (currentIndex !== -1 && (nextIndex !== 0 || loop === 'playlist')) {
-                    playNextRef.current();
-                    nextSongTriggeredRef.current = true;
-                }
-            }
+        if (!nextSongTriggeredRef.current) {
+          const activePlaylist = shuffle ? shuffledPlaylist : playlist;
+          const currentIndex = activePlaylist.findIndex(s => s.id === currentSong.id);
+          const nextIndex = (currentIndex + 1) % activePlaylist.length;
+          if (currentIndex !== -1 && (nextIndex !== 0 || loop === 'playlist')) {
+            playNextRef.current();
+            nextSongTriggeredRef.current = true;
+          }
         }
+      }
     }
   }, [audioElement, currentSong, trackTransitions, listeningControls.volumeNormalization, shuffle, shuffledPlaylist, playlist, loop]);
 
   useEffect(() => {
     if (currentSong?.isFromYouTube) {
-        if (audioElement) audioElement.pause();
-        if (youtubePlayer && typeof youtubePlayer.playVideo === 'function' && youtubePlayer.getIframe?.()) {
-            if (isPlaying) {
-                youtubePlayer.playVideo();
-            } else {
-                youtubePlayer.pauseVideo();
-            }
+      if (audioElement) audioElement.pause();
+      if (youtubePlayer && typeof youtubePlayer.playVideo === 'function' && youtubePlayer.getIframe?.()) {
+        if (isPlaying) {
+          youtubePlayer.playVideo();
+        } else {
+          youtubePlayer.pauseVideo();
         }
+      }
     } else {
-        if (youtubePlayer && typeof youtubePlayer.stopVideo === 'function' && youtubePlayer.getIframe?.()) {
-            youtubePlayer.stopVideo();
+      if (youtubePlayer && typeof youtubePlayer.stopVideo === 'function' && youtubePlayer.getIframe?.()) {
+        youtubePlayer.stopVideo();
+      }
+      if (audioElement && currentSong) {
+        const isNewSong = audioElement.src !== currentSong.audioSrc;
+        if (isNewSong) {
+          if (audioElement.src && audioElement.src.startsWith('blob:')) {
+            URL.revokeObjectURL(audioElement.src);
+          }
+          audioElement.src = currentSong.audioSrc;
         }
-        if (audioElement && currentSong) {
-            const isNewSong = audioElement.src !== currentSong.audioSrc;
-            if (isNewSong) {
-                if (audioElement.src && audioElement.src.startsWith('blob:')) {
-                    URL.revokeObjectURL(audioElement.src);
-                }
-                audioElement.src = currentSong.audioSrc;
-            }
 
-            if (isPlaying) {
-                if (audioContextRef.current?.state === 'suspended') {
-                    audioContextRef.current.resume();
-                }
-                const playPromise = audioElement.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(e => console.error("Playback failed", e));
-                }
+        if (isPlaying) {
+          if (audioContextRef.current?.state === 'suspended') {
+            audioContextRef.current.resume();
+          }
+          const playPromise = audioElement.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(e => console.error("Playback failed", e));
+          }
 
-                if (isNewSong && nextSongTriggeredRef.current && trackTransitions.automix && trackTransitions.crossfade > 0) {
-                   const baseVolume = listeningControls.volumeNormalization ? 0.8 : 1;
-                   audioElement.volume = 0;
-                   const fadeDuration = trackTransitions.crossfade * 1000;
-                   const steps = 50;
-                   const stepDuration = fadeDuration / steps;
-                   let currentStep = 0;
+          if (isNewSong && nextSongTriggeredRef.current && trackTransitions.automix && trackTransitions.crossfade > 0) {
+            const baseVolume = listeningControls.volumeNormalization ? 0.8 : 1;
+            audioElement.volume = 0;
+            const fadeDuration = trackTransitions.crossfade * 1000;
+            const steps = 50;
+            const stepDuration = fadeDuration / steps;
+            let currentStep = 0;
 
-                   if(fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
-                   
-                   fadeIntervalRef.current = setInterval(() => {
-                        if(currentStep < steps) {
-                            currentStep++;
-                            audioElement.volume = (currentStep / steps) * baseVolume;
-                        } else {
-                            if(fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
-                            fadeIntervalRef.current = null;
-                        }
-                   }, stepDuration);
-                }
+            if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
 
-            } else {
-                audioElement.pause();
-            }
-        } else if (audioElement && !currentSong) {
-            audioElement.pause();
-            audioElement.src = '';
+            fadeIntervalRef.current = setInterval(() => {
+              if (currentStep < steps) {
+                currentStep++;
+                audioElement.volume = (currentStep / steps) * baseVolume;
+              } else {
+                if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
+                fadeIntervalRef.current = null;
+              }
+            }, stepDuration);
+          }
+
+        } else {
+          audioElement.pause();
         }
+      } else if (audioElement && !currentSong) {
+        audioElement.pause();
+        audioElement.src = '';
+      }
     }
   }, [currentSong, isPlaying, audioElement, youtubePlayer, trackTransitions.automix, trackTransitions.crossfade, listeningControls.volumeNormalization]);
 
@@ -591,19 +592,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(progressInterval);
   }, [isPlaying, updateProgress]);
 
-  
+
   const closePlayer = useCallback(() => {
     if (audioElement) {
-        audioElement.pause();
-        if (audioElement.src && audioElement.src.startsWith('blob:')) {
-            URL.revokeObjectURL(audioElement.src);
-        }
-        audioElement.src = '';
+      audioElement.pause();
+      if (audioElement.src && audioElement.src.startsWith('blob:')) {
+        URL.revokeObjectURL(audioElement.src);
+      }
+      audioElement.src = '';
     }
     if (youtubePlayer && typeof youtubePlayer.stopVideo === 'function' && youtubePlayer.getIframe?.()) {
       youtubePlayer.stopVideo();
     }
-    
+
     setCurrentSong(null);
     setIsPlaying(false);
     setIsFullScreenPlayerOpen(false);
@@ -611,10 +612,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const toggleFullScreenPlayer = useCallback(() => {
     if (currentSong) {
-        setIsFullScreenPlayerOpen(prev => {
-            if (!prev) setShowVideo(false);
-            return !prev;
-        });
+      setIsFullScreenPlayerOpen(prev => {
+        if (!prev) setShowVideo(false);
+        return !prev;
+      });
     }
   }, [currentSong]);
 
@@ -628,12 +629,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const toggleLoop = useCallback(() => {
     setLoop(currentLoop => {
-        if (currentLoop === 'none') return 'playlist';
-        if (currentLoop === 'playlist') return 'song';
-        return 'none';
+      if (currentLoop === 'none') return 'playlist';
+      if (currentLoop === 'playlist') return 'song';
+      return 'none';
     });
   }, []);
-  
+
   useEffect(() => {
     if (playlist.length === 0) return;
 
@@ -650,11 +651,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const handleLoopToast = () => {
       let description = "";
       if (loop === 'playlist') {
-          description = "Looping playlist";
+        description = "Looping playlist";
       } else if (loop === 'song') {
-          description = "Looping song";
+        description = "Looping song";
       } else {
-          description = "Looping disabled";
+        description = "Looping disabled";
       }
       toast({ description });
     }
@@ -662,32 +663,32 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [loop, playlist.length, toast]);
 
   const toggleShowVideo = useCallback(() => {
-      let time = 0;
-      if (currentSong?.isFromYouTube && youtubePlayer) {
-          time = youtubePlayer.getCurrentTime();
-      } else if (audioElement) {
-          time = audioElement.currentTime;
-      }
-      setCurrentTime(time);
-      setShowVideo(prev => !prev);
+    let time = 0;
+    if (currentSong?.isFromYouTube && youtubePlayer) {
+      time = youtubePlayer.getCurrentTime();
+    } else if (audioElement) {
+      time = audioElement.currentTime;
+    }
+    setCurrentTime(time);
+    setShowVideo(prev => !prev);
   }, [currentSong, youtubePlayer, audioElement]);
-  
+
   const onPlayerReady = (event: any) => {
     setYoutubePlayer(event.target);
     if (showVideo && currentTime > 0) {
       event.target.seekTo(currentTime, true);
     }
   };
-  
+
   const onPlayerStateChange = (event: any) => {
     if (event.data === 0) {
-        handleSongEnd();
+      handleSongEnd();
     }
   };
-  
+
   const handleCreatePlaylist = () => {
     if (!user || !firestore) return;
-    
+
     const randomCover = PlaceHolderImages[Math.floor(Math.random() * PlaceHolderImages.length)].imageUrl;
 
     const newPlaylistData = {
@@ -703,18 +704,18 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     addDoc(playlistsCollection, newPlaylistData)
       .then(() => {
-          toast({
-            title: 'Playlist created!',
-            description: 'Your new playlist has been added to your library.',
-          });
+        toast({
+          title: 'Playlist created!',
+          description: 'Your new playlist has been added to your library.',
+        });
       })
       .catch((serverError) => {
-          const permissionError = new FirestorePermissionError({
-              path: playlistsCollection.path,
-              operation: 'create',
-              requestResourceData: newPlaylistData,
-          });
-          errorEmitter.emit('permission-error', permissionError);
+        const permissionError = new FirestorePermissionError({
+          path: playlistsCollection.path,
+          operation: 'create',
+          requestResourceData: newPlaylistData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
       });
   };
 
@@ -730,7 +731,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     try {
       await batch.commit();
     } catch (error: any) {
-       toast({
+      toast({
         variant: "destructive",
         title: "Error deleting playlists",
         description: error.message,
@@ -780,7 +781,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     <PlayerContext.Provider value={value}>
       {children}
       <div className={cn('hidden', currentSong?.isFromYouTube && !showVideo && 'block')}>
-        <YouTube 
+        <YouTube
           videoId={currentSong?.isFromYouTube ? currentSong.id : undefined}
           onReady={onPlayerReady}
           onStateChange={onPlayerStateChange}
@@ -806,4 +807,4 @@ export function usePlayer(): PlayerContextType {
   return context;
 }
 
-    
+

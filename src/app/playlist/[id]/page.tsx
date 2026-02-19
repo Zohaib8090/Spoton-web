@@ -20,7 +20,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
-export default function PlaylistPage({ params }: { params: { id: string } }) {
+export default function PlaylistPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = React.use(params);
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
@@ -30,15 +31,15 @@ export default function PlaylistPage({ params }: { params: { id: string } }) {
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [newPlaylistDescription, setNewPlaylistDescription] = useState("");
 
-  const playlistDocRef = useMemoFirebase(() => 
-    user && firestore ? doc(firestore, 'users', user.uid, 'playlists', params.id) : null,
-    [user, firestore, params.id]
+  const playlistDocRef = useMemoFirebase(() =>
+    user && firestore ? doc(firestore, 'users', user.uid, 'playlists', id) : null,
+    [user, firestore, id]
   );
-  
+
   const { data: playlistData, isLoading: isPlaylistLoading } = useDoc<Playlist>(playlistDocRef);
 
   // Fallback to local album data if playlist is not found or loading
-  const albumData = albums.find((a) => a.id === params.id);
+  const albumData = albums.find((a) => a.id === id);
 
   useEffect(() => {
     if (playlistData) {
@@ -49,20 +50,20 @@ export default function PlaylistPage({ params }: { params: { id: string } }) {
 
   let content: Playlist | Album | undefined;
   let isPlaylist = false;
-  
+
   if (playlistData) {
-      content = {
-          ...playlistData,
-          songs: (playlistData.trackIds || []).map(id => ({ // Mock song data for now
-              id: id, title: `Track ${id}`, artist: 'Unknown', duration: '3:00', album: 'Various', albumId: 'various', albumArt: 'https://picsum.photos/seed/track/400/400'
-          }))
-      };
-      isPlaylist = true;
+    content = {
+      ...playlistData,
+      songs: (playlistData.trackIds || []).map(id => ({ // Mock song data for now
+        id: id, title: `Track ${id}`, artist: 'Unknown', duration: '3:00', album: 'Various', albumId: 'various', albumArt: 'https://picsum.photos/seed/track/400/400', audioSrc: ""
+      }))
+    };
+    isPlaylist = true;
   } else if (albumData) {
-      content = albumData;
-      isPlaylist = false;
+    content = albumData;
+    isPlaylist = false;
   }
-  
+
   const handleDeletePlaylist = async () => {
     if (!playlistDocRef) return;
     try {
@@ -95,22 +96,22 @@ export default function PlaylistPage({ params }: { params: { id: string } }) {
   // Handle loading state
   if (isPlaylistLoading) {
     return (
-        <div className="space-y-6 pb-8">
-            <Skeleton className="h-10 w-24 mb-4" />
-            <div className="flex flex-col sm:flex-row items-center gap-6">
-                <Skeleton className="rounded-lg shadow-lg w-40 h-40 sm:w-48 sm:h-48 flex-shrink-0" />
-                <div className="space-y-3">
-                    <Skeleton className="h-4 w-16" />
-                    <Skeleton className="h-12 w-72" />
-                    <Skeleton className="h-5 w-48" />
-                    <Skeleton className="h-5 w-32" />
-                </div>
-            </div>
-            <Skeleton className="h-10 w-full" />
-            <div className="space-y-2">
-                {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
-            </div>
+      <div className="space-y-6 pb-8">
+        <Skeleton className="h-10 w-24 mb-4" />
+        <div className="flex flex-col sm:flex-row items-center gap-6">
+          <Skeleton className="rounded-lg shadow-lg w-40 h-40 sm:w-48 sm:h-48 flex-shrink-0" />
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-12 w-72" />
+            <Skeleton className="h-5 w-48" />
+            <Skeleton className="h-5 w-32" />
+          </div>
         </div>
+        <Skeleton className="h-10 w-full" />
+        <div className="space-y-2">
+          {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
+        </div>
+      </div>
     );
   }
 
@@ -126,12 +127,12 @@ export default function PlaylistPage({ params }: { params: { id: string } }) {
   const description = isPlaylist ? (content as Playlist).description : (content as Album).artist;
   const coverArt = isPlaylist ? (content as Playlist).coverArt : (content as Album).albumArt;
   const songs = content.songs || [];
-  
+
   const totalDuration = songs.reduce((acc, song) => {
     const parts = song.duration.split(':');
     if (parts.length !== 2) return acc;
     const [minutes, seconds] = parts.map(Number);
-    if(isNaN(minutes) || isNaN(seconds)) return acc;
+    if (isNaN(minutes) || isNaN(seconds)) return acc;
     return acc + minutes * 60 + seconds;
   }, 0);
 
@@ -139,118 +140,118 @@ export default function PlaylistPage({ params }: { params: { id: string } }) {
 
   return (
     <>
-    <div className="space-y-6 pb-8">
-      <Button variant="ghost" onClick={() => router.back()} className="mb-4">
-        <ChevronLeft className="mr-2 h-4 w-4" />
-        Back
-      </Button>
+      <div className="space-y-6 pb-8">
+        <Button variant="ghost" onClick={() => router.back()} className="mb-4">
+          <ChevronLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
 
-      <div className="flex flex-col sm:flex-row items-center gap-6">
-        <Image
-          src={coverArt}
-          alt={name}
-          width={200}
-          height={200}
-          quality={100}
-          className="rounded-lg shadow-lg w-40 h-40 sm:w-48 sm:h-48 flex-shrink-0"
-          data-ai-hint="album cover playlist"
-        />
-        <div className="space-y-2 text-center sm:text-left">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{isPlaylist ? "Playlist" : "Album"}</h2>
-          <div className="flex items-center gap-3 justify-center sm:justify-start">
-            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tighter">{name}</h1>
-            {isPlaylist && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-10 w-10 mt-2">
-                    <MoreHorizontal />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onSelect={() => setIsRenameDialogOpen(true)}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Rename
-                  </DropdownMenuItem>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                        <Trash2 className="mr-2 h-4 w-4 text-red-500" />
-                        <span className="text-red-500">Delete</span>
-                      </DropdownMenuItem>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. This will permanently delete the playlist '{name}'.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeletePlaylist} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+        <div className="flex flex-col sm:flex-row items-center gap-6">
+          <Image
+            src={coverArt}
+            alt={name}
+            width={200}
+            height={200}
+            quality={100}
+            className="rounded-lg shadow-lg w-40 h-40 sm:w-48 sm:h-48 flex-shrink-0"
+            data-ai-hint="album cover playlist"
+          />
+          <div className="space-y-2 text-center sm:text-left">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{isPlaylist ? "Playlist" : "Album"}</h2>
+            <div className="flex items-center gap-3 justify-center sm:justify-start">
+              <h1 className="text-4xl md:text-6xl font-extrabold tracking-tighter">{name}</h1>
+              {isPlaylist && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-10 w-10 mt-2">
+                      <MoreHorizontal />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onSelect={() => setIsRenameDialogOpen(true)}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Rename
+                    </DropdownMenuItem>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                          <Trash2 className="mr-2 h-4 w-4 text-red-500" />
+                          <span className="text-red-500">Delete</span>
+                        </DropdownMenuItem>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the playlist '{name}'.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleDeletePlaylist} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+            <p className="text-muted-foreground">{description}</p>
+            <p className="text-sm text-muted-foreground">
+              {songs.length} songs, about {totalMinutes} min
+            </p>
           </div>
-          <p className="text-muted-foreground">{description}</p>
-          <p className="text-sm text-muted-foreground">
-            {songs.length} songs, about {totalMinutes} min
-          </p>
         </div>
+
+        <div className="hidden sm:grid grid-cols-[2rem_1fr_1fr_auto] items-center gap-4 px-4 py-2 text-muted-foreground text-sm border-b border-muted/50">
+          <div className="text-center">#</div>
+          <div>Title</div>
+          <div>Album</div>
+          <div className="justify-self-end"><Clock size={16} /></div>
+        </div>
+        <PlaylistContent songs={songs} />
       </div>
-      
-      <div className="hidden sm:grid grid-cols-[2rem_1fr_1fr_auto] items-center gap-4 px-4 py-2 text-muted-foreground text-sm border-b border-muted/50">
-        <div className="text-center">#</div>
-        <div>Title</div>
-        <div>Album</div>
-        <div className="justify-self-end"><Clock size={16} /></div>
-      </div>
-      <PlaylistContent songs={songs} />
-    </div>
-    
-    <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Rename Playlist</DialogTitle>
-          <DialogDescription>
-            Give your playlist a new name and description.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleRenamePlaylist}>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="playlist-name">Name</Label>
-              <Input
-                id="playlist-name"
-                value={newPlaylistName}
-                onChange={(e) => setNewPlaylistName(e.target.value)}
-                placeholder="My Awesome Playlist"
-              />
+
+      <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Playlist</DialogTitle>
+            <DialogDescription>
+              Give your playlist a new name and description.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleRenamePlaylist}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="playlist-name">Name</Label>
+                <Input
+                  id="playlist-name"
+                  value={newPlaylistName}
+                  onChange={(e) => setNewPlaylistName(e.target.value)}
+                  placeholder="My Awesome Playlist"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="playlist-description">Description</Label>
+                <Input
+                  id="playlist-description"
+                  value={newPlaylistDescription}
+                  onChange={(e) => setNewPlaylistDescription(e.target.value)}
+                  placeholder="A short description..."
+                />
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="playlist-description">Description</Label>
-              <Input
-                id="playlist-description"
-                value={newPlaylistDescription}
-                onChange={(e) => setNewPlaylistDescription(e.target.value)}
-                placeholder="A short description..."
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="ghost">Cancel</Button>
-            </DialogClose>
-            <Button type="submit">Save</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="ghost">Cancel</Button>
+              </DialogClose>
+              <Button type="submit">Save</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
 
-    
+

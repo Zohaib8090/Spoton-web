@@ -149,17 +149,17 @@ export default function LibraryPage() {
 
   return (
     <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h1 className="text-3xl font-bold tracking-tight">Library</h1>
-             <div className="flex gap-2">
+             <div className="flex flex-wrap gap-2">
                 {isSelectionMode ? (
                   <>
-                    <Button variant="ghost" onClick={handleToggleSelectionMode}>
+                    <Button variant="ghost" size="sm" onClick={handleToggleSelectionMode}>
                         <XCircle className="mr-2 h-4 w-4" /> Cancel
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="destructive" disabled={selectedPlaylists.length === 0}>
+                        <Button variant="destructive" size="sm" disabled={selectedPlaylists.length === 0}>
                             <Trash2 className="mr-2 h-4 w-4" /> Delete ({selectedPlaylists.length})
                         </Button>
                       </AlertDialogTrigger>
@@ -181,10 +181,10 @@ export default function LibraryPage() {
                   </>
                 ) : (
                   <>
-                    <Button variant="outline" onClick={handleToggleSelectionMode}>
+                    <Button variant="outline" size="sm" onClick={handleToggleSelectionMode}>
                         <Trash2 className="mr-2 h-4 w-4" /> Remove Playlist
                     </Button>
-                    <Button onClick={handleCreatePlaylist}>
+                    <Button size="sm" onClick={handleCreatePlaylist}>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Create Playlist
                     </Button>
@@ -194,14 +194,16 @@ export default function LibraryPage() {
         </div>
       
       <Tabs defaultValue="playlists" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="playlists">Playlists</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
-          <TabsTrigger value="albums">Albums</TabsTrigger>
-          <TabsTrigger value="artists">Artists</TabsTrigger>
-          <TabsTrigger value="liked">Liked Songs</TabsTrigger>
-          <TabsTrigger value="local">Local Files</TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+          <TabsList className="w-max min-w-full justify-start">
+            <TabsTrigger value="playlists">Playlists</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
+            <TabsTrigger value="albums">Albums</TabsTrigger>
+            <TabsTrigger value="artists">Artists</TabsTrigger>
+            <TabsTrigger value="liked">Liked Songs</TabsTrigger>
+            <TabsTrigger value="local">Local Files</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="playlists">
           <Suspense fallback={<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-4">

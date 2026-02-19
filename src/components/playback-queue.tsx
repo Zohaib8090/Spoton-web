@@ -51,11 +51,11 @@ export function PlaybackQueue() {
         animationFrameId = requestAnimationFrame(updateActiveLyric);
         return;
       }
-      
-      const latestTime = currentSong?.isFromYouTube 
+
+      const latestTime = currentSong?.isFromYouTube
         ? youtubePlayer?.getCurrentTime() ?? 0
         : audioElement?.currentTime ?? 0;
-      
+
       let newIndex = -1;
       for (let i = lyrics.length - 1; i >= 0; i--) {
         if (parseFloat(lyrics[i].start) <= latestTime) {
@@ -112,11 +112,11 @@ export function PlaybackQueue() {
         <div className="grid grid-cols-2 flex-shrink-0 border-b">
           <Button variant="ghost" className="rounded-none border-b-2 border-primary">Queue</Button>
           <Button variant="ghost" className="rounded-none text-muted-foreground" onClick={() => {
-              if(lyrics.length > 0) {
-                  toggleQueue();
-                  // A bit of a hack to show the lyrics sheet
-                  setTimeout(toggleQueue, 50);
-              }
+            if (lyrics.length > 0) {
+              toggleQueue();
+              // A bit of a hack to show the lyrics sheet
+              setTimeout(toggleQueue, 50);
+            }
           }}>Lyrics</Button>
         </div>
         <ScrollArea className="flex-1">
@@ -139,79 +139,79 @@ export function PlaybackQueue() {
             ))}
           </div>
         </ScrollArea>
-       
+
         {lyrics.length > 0 && (
-             <Sheet open={isQueueOpen} onOpenChange={toggleQueue}>
-                 <SheetContent className="w-full md:max-w-md p-0 flex flex-col">
-                    <SheetHeader className="p-4 border-b">
-                        <SheetTitle>Lyrics</SheetTitle>
-                        <SheetDescription>{currentSong?.title} by {currentSong?.artist}</SheetDescription>
-                    </SheetHeader>
-                     <div className="grid grid-cols-2 flex-shrink-0 border-b">
-                        <Button variant="ghost" className="rounded-none text-muted-foreground" onClick={toggleQueue}>Queue</Button>
-                        <Button variant="ghost" className="rounded-none border-b-2 border-primary">Lyrics</Button>
-                    </div>
-                    <ScrollArea className="flex-1 p-6">
-                        <div className="space-y-4">
-                            {lyrics.map((line, index) => (
-                                <p 
-                                    key={index} 
-                                    ref={el => lyricLinesRef.current[index] = el}
-                                    className={cn(
-                                        "text-muted-foreground transition-all duration-300 text-2xl font-semibold",
-                                        activeLyricIndex === index ? "text-primary scale-105" : "opacity-50"
-                                    )}
-                                >
-                                    {line.text}
-                                </p>
-                            ))}
-                        </div>
-                    </ScrollArea>
-                 </SheetContent>
-             </Sheet>
+          <Sheet open={isQueueOpen} onOpenChange={toggleQueue}>
+            <SheetContent className="w-full md:max-w-md p-0 flex flex-col">
+              <SheetHeader className="p-4 border-b">
+                <SheetTitle>Lyrics</SheetTitle>
+                <SheetDescription>{currentSong?.title} by {currentSong?.artist}</SheetDescription>
+              </SheetHeader>
+              <div className="grid grid-cols-2 flex-shrink-0 border-b">
+                <Button variant="ghost" className="rounded-none text-muted-foreground" onClick={toggleQueue}>Queue</Button>
+                <Button variant="ghost" className="rounded-none border-b-2 border-primary">Lyrics</Button>
+              </div>
+              <ScrollArea className="flex-1 p-6">
+                <div className="space-y-4">
+                  {lyrics.map((line, index) => (
+                    <p
+                      key={index}
+                      ref={el => { lyricLinesRef.current[index] = el; }}
+                      className={cn(
+                        "text-muted-foreground transition-all duration-300 text-2xl font-semibold",
+                        activeLyricIndex === index ? "text-primary scale-105" : "opacity-50"
+                      )}
+                    >
+                      {line.text}
+                    </p>
+                  ))}
+                </div>
+              </ScrollArea>
+            </SheetContent>
+          </Sheet>
         )}
         {isLyricsLoading && (
-             <Sheet open={isQueueOpen} onOpenChange={toggleQueue}>
-                 <SheetContent className="w-full md:max-w-md p-0 flex flex-col">
-                     <SheetHeader className="p-4 border-b">
-                        <SheetTitle>Lyrics</SheetTitle>
-                    </SheetHeader>
-                     <div className="grid grid-cols-2 flex-shrink-0 border-b">
-                        <Button variant="ghost" className="rounded-none text-muted-foreground" onClick={toggleQueue}>Queue</Button>
-                        <Button variant="ghost" className="rounded-none border-b-2 border-primary">Lyrics</Button>
-                    </div>
-                    <div className="flex-1 flex items-center justify-center">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                            <span>Loading lyrics...</span>
-                        </div>
-                    </div>
-                 </SheetContent>
-            </Sheet>
+          <Sheet open={isQueueOpen} onOpenChange={toggleQueue}>
+            <SheetContent className="w-full md:max-w-md p-0 flex flex-col">
+              <SheetHeader className="p-4 border-b">
+                <SheetTitle>Lyrics</SheetTitle>
+              </SheetHeader>
+              <div className="grid grid-cols-2 flex-shrink-0 border-b">
+                <Button variant="ghost" className="rounded-none text-muted-foreground" onClick={toggleQueue}>Queue</Button>
+                <Button variant="ghost" className="rounded-none border-b-2 border-primary">Lyrics</Button>
+              </div>
+              <div className="flex-1 flex items-center justify-center">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Loading lyrics...</span>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
         )}
-         {currentSong?.isFromYouTube && lyrics.length === 0 && !isLyricsLoading && (
-             <Sheet open={isQueueOpen} onOpenChange={toggleQueue}>
-                 <SheetContent className="w-full md:max-w-md p-0 flex flex-col">
-                    <SheetHeader className="p-4 border-b">
-                        <SheetTitle>Lyrics</SheetTitle>
-                    </SheetHeader>
-                     <div className="grid grid-cols-2 flex-shrink-0 border-b">
-                        <Button variant="ghost" className="rounded-none text-muted-foreground" onClick={toggleQueue}>Queue</Button>
-                        <Button variant="ghost" className="rounded-none border-b-2 border-primary">Lyrics</Button>
-                    </div>
-                    <div className="flex-1 flex items-center justify-center">
-                        <div className="text-center text-muted-foreground">
-                            <Music2 className="h-10 w-10 mx-auto mb-2" />
-                            <p>No lyrics available for this song.</p>
-                        </div>
-                    </div>
-                 </SheetContent>
-             </Sheet>
-         )}
+        {currentSong?.isFromYouTube && lyrics.length === 0 && !isLyricsLoading && (
+          <Sheet open={isQueueOpen} onOpenChange={toggleQueue}>
+            <SheetContent className="w-full md:max-w-md p-0 flex flex-col">
+              <SheetHeader className="p-4 border-b">
+                <SheetTitle>Lyrics</SheetTitle>
+              </SheetHeader>
+              <div className="grid grid-cols-2 flex-shrink-0 border-b">
+                <Button variant="ghost" className="rounded-none text-muted-foreground" onClick={toggleQueue}>Queue</Button>
+                <Button variant="ghost" className="rounded-none border-b-2 border-primary">Lyrics</Button>
+              </div>
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center text-muted-foreground">
+                  <Music2 className="h-10 w-10 mx-auto mb-2" />
+                  <p>No lyrics available for this song.</p>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+        )}
 
       </SheetContent>
     </Sheet>
   );
 }
 
-    
+

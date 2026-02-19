@@ -18,9 +18,9 @@ const YoutubeLyricsInputSchema = z.object({
 export type YoutubeLyricsInput = z.infer<typeof YoutubeLyricsInputSchema>;
 
 const LyricLineSchema = z.object({
-    start: z.string(),
-    dur: z.string(),
-    text: z.string()
+  start: z.string(),
+  dur: z.string(),
+  text: z.string()
 });
 
 const YoutubeLyricsOutputSchema = z.object({
@@ -43,8 +43,8 @@ const getYoutubeLyricsFlow = ai.defineFlow(
   async ({ videoId }) => {
     try {
       const subtitles = await getSubtitles({
-        videoID: videoId,
-        lang: 'en' // You might want to make this configurable
+        videoId, // Using videoId instead of videoID
+        lang: 'en'
       });
 
       return { lyrics: subtitles };

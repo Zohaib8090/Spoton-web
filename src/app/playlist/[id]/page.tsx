@@ -36,7 +36,7 @@ export default function PlaylistPage({ params }: { params: Promise<{ id: string 
     [user, firestore, id]
   );
 
-  const { data: playlistData, isLoading: isPlaylistLoading } = useDoc<Playlist>(playlistDocRef);
+  const { data: playlistData, isLoading: isPlaylistLoading, error: playlistError } = useDoc<Playlist>(playlistDocRef);
 
   // Fallback to local album data if playlist is not found or loading
   const albumData = albums.find((a) => a.id === id);
@@ -96,7 +96,7 @@ export default function PlaylistPage({ params }: { params: Promise<{ id: string 
   // Handle loading state
   // We wait for both auth and playlist data to load
   // If user is null but auth is not loading, it's either an public album (albumData) or it is a 404
-  if (isAuthLoading || (isPlaylistLoading && !albumData)) {
+  if (isAuthLoading || (isPlaylistLoading && !albumData && !playlistError)) {
     return (
       <div className="space-y-6 pb-8">
         <Skeleton className="h-10 w-24 mb-4" />
@@ -113,6 +113,19 @@ export default function PlaylistPage({ params }: { params: Promise<{ id: string 
         <div className="space-y-2">
           {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
         </div>
+      </div>
+    );
+  }
+
+  // Handle errors (e.g. Firebase connection blocked or permission denied)
+  if (playlistError && !albumData) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
+        <h2 className="text-2xl font-bold">Unable to load playlist</h2>
+        <p className="text-muted-foreground text-center max-w-md">
+          There was an error connecting to the database. If you have an ad-blocker enabled, please try disabling it for this site.
+        </p>
+        <Button onClick={() => window.location.reload()}>Retry</Button>
       </div>
     );
   }

@@ -94,9 +94,11 @@ export default function PlaylistPage({ params }: { params: Promise<{ id: string 
 
 
   // Handle loading state
-  // We wait for both auth and playlist data to load
-  // If user is null but auth is not loading, it's either an public album (albumData) or it is a 404
-  if (isAuthLoading || (isPlaylistLoading && !albumData && !playlistError)) {
+  // We wait for auth to load. Once auth is done, we wait for the playlist data.
+  // We check playlistDocRef because useDoc's isLoading might be false for one frame while docRef initializes.
+  const isActualLoading = isAuthLoading || (playlistDocRef && !playlistData && !playlistError && !albumData);
+
+  if (isActualLoading) {
     return (
       <div className="space-y-6 pb-8">
         <Skeleton className="h-10 w-24 mb-4" />
@@ -123,14 +125,14 @@ export default function PlaylistPage({ params }: { params: Promise<{ id: string 
       <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
         <h2 className="text-2xl font-bold">Unable to load playlist</h2>
         <p className="text-muted-foreground text-center max-w-md">
-          There was an error connecting to the database. If you have an ad-blocker enabled, please try disabling it for this site.
+          There was an error connecting to the database. If you have an ad-blocker enabled (like uBlock Origin or Adblock Plus), please try disabling it for this site and refresh.
         </p>
         <Button onClick={() => window.location.reload()}>Retry</Button>
       </div>
     );
   }
 
-  // Handle not found case after loading
+  // Handle not found case after all loading and error checks are done
   if (!content && !isAuthLoading && !isPlaylistLoading) {
     notFound();
   }

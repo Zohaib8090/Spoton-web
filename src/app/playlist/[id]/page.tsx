@@ -23,7 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function PlaylistPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = React.use(params);
   const router = useRouter();
-  const { user } = useUser();
+  const { user, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -94,7 +94,9 @@ export default function PlaylistPage({ params }: { params: Promise<{ id: string 
 
 
   // Handle loading state
-  if (isPlaylistLoading) {
+  // We wait for both auth and playlist data to load
+  // If user is null but auth is not loading, it's either an public album (albumData) or it is a 404
+  if (isAuthLoading || (isPlaylistLoading && !albumData)) {
     return (
       <div className="space-y-6 pb-8">
         <Skeleton className="h-10 w-24 mb-4" />
@@ -116,7 +118,7 @@ export default function PlaylistPage({ params }: { params: Promise<{ id: string 
   }
 
   // Handle not found case after loading
-  if (!content && !isPlaylistLoading) {
+  if (!content && !isAuthLoading && !isPlaylistLoading) {
     notFound();
   }
 

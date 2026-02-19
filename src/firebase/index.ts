@@ -17,12 +17,21 @@ export function initializeFirebase() {
       // Attempt to initialize via Firebase App Hosting environment variables
       firebaseApp = initializeApp();
     } catch (e) {
-      // Only warn in production because it's normal to use the firebaseConfig to initialize
-      // during development
-      if (process.env.NODE_ENV === "production") {
-        console.warn('Automatic initialization failed. Falling back to firebase config object.', e);
+      // If automatic initialization fails, attempt to use the config object
+      try {
+        firebaseApp = initializeApp(firebaseConfig);
+      } catch (configError) {
+        // Build-time safeguard: if initialization fails (e.g. missing API keys during Vercel build),
+        // we log a warning but don't crash the process if we're in a build/SSR environment.
+        console.warn('Firebase initialization failed. If this is a build environment, ensure environment variables are set in your dashboard.', configError);
+
+        // Return dummy SDKs that won't crash the build but will fail gracefully at runtime
+        return {
+          firebaseApp: null as any,
+          auth: null as any,
+          firestore: null as any,
+        };
       }
-      firebaseApp = initializeApp(firebaseConfig);
     }
 
     return getSdks(firebaseApp);

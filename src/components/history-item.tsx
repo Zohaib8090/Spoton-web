@@ -20,7 +20,7 @@ export function HistoryItem({ song: historyItem }: { song: HistoryItemType }) {
     isFromYouTube: historyItem.isFromYouTube,
     album: historyItem.album || (historyItem.isFromYouTube ? "YouTube" : "Unknown Album"),
     albumId: historyItem.albumId || (historyItem.isFromYouTube ? "youtube" : "unknown"),
-    audioSrc: historyItem.audioSrc || (historyItem.isFromYouTube ? `youtube:${historyItem.id}`: '')
+    audioSrc: historyItem.audioSrc || (historyItem.isFromYouTube ? `youtube:${historyItem.id}` : '')
   };
 
   return (
@@ -41,8 +41,8 @@ export function HistoryItem({ song: historyItem }: { song: HistoryItemType }) {
         unoptimized={song.isFromYouTube}
       />
       <div className="flex-grow min-w-0">
-        <p className={cn("font-semibold truncate", currentSong?.id === song.id && "text-primary")}>{song.title}</p>
-        <p className="text-sm text-muted-foreground truncate">{song.artist}</p>
+        <p className={cn("font-semibold break-words", currentSong?.id === song.id && "text-primary")}>{song.title}</p>
+        <p className="text-sm text-muted-foreground break-words">{song.artist}</p>
       </div>
       <button className="opacity-0 group-hover:opacity-100 p-2">
         <Play className="h-5 w-5" />

@@ -14,7 +14,7 @@ export type YoutubeResult = {
 function formatDuration(duration: string): string {
     const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
     if (!match) return "0:00";
-    
+
     const hours = (parseInt(match[1]) || 0);
     const minutes = (parseInt(match[2]) || 0);
     const seconds = (parseInt(match[3]) || 0);
@@ -27,27 +27,32 @@ function formatDuration(duration: string): string {
     return `${fmtMinutes}:${fmtSeconds.toString().padStart(2, '0')}`;
 }
 
-export async function searchYoutubeAction(query: string): Promise<{ results?: YoutubeResult[], error?: string }> {
+export async function searchYoutubeAction(query: string, searchType: 'youtube' | 'youtubeMusic' = 'youtubeMusic'): Promise<{ results?: YoutubeResult[], error?: string }> {
     const youtube = google.youtube('v3');
     const apiKey = process.env.YOUTUBE_API_KEY;
 
     if (!apiKey) {
-      console.error('YOUTUBE_API_KEY environment variable not set.');
-      return { error: 'Server configuration error: YouTube API key is missing.' };
+        console.error('YOUTUBE_API_KEY environment variable not set.');
+        return { error: 'Server configuration error: YouTube API key is missing.' };
     }
 
     try {
-        const searchResponse = await youtube.search.list({
+        const queryParams: any = {
             key: apiKey,
             part: ['snippet'],
-            q: `${query} music`,
+            q: searchType === 'youtubeMusic' ? `${query} music` : query,
             type: ['video'],
-            videoCategoryId: '10', // Music category
             maxResults: 15,
-        });
+        };
+
+        if (searchType === 'youtubeMusic') {
+            queryParams.videoCategoryId = '10'; // Music category
+        }
+
+        const searchResponse = await youtube.search.list(queryParams);
 
         const videoIds = searchResponse.data.items?.map(item => item.id?.videoId).filter((id): id is string => !!id) || [];
-        
+
         if (videoIds.length === 0) {
             return { results: [] };
         }

@@ -12,6 +12,11 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { generatePersonalizedRecommendations } from '@/ai/flows/personalized-recommendations';
 import { searchYoutubeAction, type YoutubeResult } from '@/app/search/actions';
 import { useCollection } from '@/firebase/firestore/use-collection';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 type LoopMode = 'none' | 'playlist' | 'song';
 export type Quality = 'automatic' | 'high' | 'standard' | 'low' | 'very-high';
@@ -44,6 +49,7 @@ interface PlayerContextType {
   lyrics: LyricLine[];
   isLyricsLoading: boolean;
   showVideo: boolean;
+  isYoutubeMode: boolean;
   audioElement: HTMLAudioElement | null;
   youtubePlayer: any | null; // YouTube player instance
   isEqEnabled: boolean;
@@ -86,6 +92,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [showVideo, setShowVideo] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
 
+  const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState("");
+  const [newPlaylistDescription, setNewPlaylistDescription] = useState("");
+  const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
+
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const pannerNodeRef = useRef<StereoPannerNode | null>(null);
@@ -110,6 +121,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     audio: { wifi: 'automatic', cellular: 'standard' },
     video: { wifi: 'standard', cellular: 'standard' },
   };
+
+  const isYoutubeMode = userData?.settings?.streamingServices?.youtube === true;
 
   const listeningControls = userData?.settings?.listeningControls || {
     volumeNormalization: true,
@@ -688,12 +701,24 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const handleCreatePlaylist = () => {
     if (!user || !firestore) return;
+    setNewPlaylistName("");
+    setNewPlaylistDescription("");
+    setIsPlaylistModalOpen(true);
+  };
 
+  const confirmCreatePlaylist = async () => {
+    if (!user || !firestore) return;
+    if (!newPlaylistName.trim()) {
+      toast({ title: "Name required", description: "Please enter a playlist name.", variant: "destructive" });
+      return;
+    }
+
+    setIsCreatingPlaylist(true);
     const randomCover = PlaceHolderImages[Math.floor(Math.random() * PlaceHolderImages.length)].imageUrl;
 
     const newPlaylistData = {
-      name: 'My New Playlist',
-      description: 'A collection of my favorite tracks.',
+      name: newPlaylistName.trim(),
+      description: newPlaylistDescription.trim(),
       trackIds: [],
       createdAt: serverTimestamp(),
       coverArt: randomCover,
@@ -702,21 +727,23 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     const playlistsCollection = collection(firestore, 'users', user.uid, 'playlists');
 
-    addDoc(playlistsCollection, newPlaylistData)
-      .then(() => {
-        toast({
-          title: 'Playlist created!',
-          description: 'Your new playlist has been added to your library.',
-        });
-      })
-      .catch((serverError) => {
-        const permissionError = new FirestorePermissionError({
-          path: playlistsCollection.path,
-          operation: 'create',
-          requestResourceData: newPlaylistData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+    try {
+      await addDoc(playlistsCollection, newPlaylistData);
+      toast({
+        title: 'Playlist created!',
+        description: `"${newPlaylistName.trim()}" has been added to your library.`,
       });
+      setIsPlaylistModalOpen(false);
+    } catch (serverError) {
+      const permissionError = new FirestorePermissionError({
+        path: playlistsCollection.path,
+        operation: 'create',
+        requestResourceData: newPlaylistData,
+      });
+      errorEmitter.emit('permission-error', permissionError);
+    } finally {
+      setIsCreatingPlaylist(false);
+    }
   };
 
   const deletePlaylists = async (playlistIds: string[]) => {
@@ -766,6 +793,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     isLyricsLoading,
     setIsLyricsLoading,
     showVideo,
+    isYoutubeMode,
     toggleShowVideo,
     setYoutubePlayer,
     setEqualiserSettings,
@@ -780,21 +808,66 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   return (
     <PlayerContext.Provider value={value}>
       {children}
-      <div className={cn('hidden', currentSong?.isFromYouTube && !showVideo && 'block')}>
-        <YouTube
-          videoId={currentSong?.isFromYouTube ? currentSong.id : undefined}
-          onReady={onPlayerReady}
-          onStateChange={onPlayerStateChange}
-          opts={{
-            height: '0',
-            width: '0',
-            playerVars: {
-              autoplay: 1,
-              start: currentTime,
-            },
-          }}
-        />
-      </div>
+      {(!isFullScreenPlayerOpen || (!showVideo && !isYoutubeMode)) && (
+        <div className={cn('hidden', currentSong?.isFromYouTube && 'block')}>
+          <YouTube
+            videoId={currentSong?.isFromYouTube ? currentSong.id : undefined}
+            onReady={onPlayerReady}
+            onStateChange={onPlayerStateChange}
+            opts={{
+              height: '0',
+              width: '0',
+              playerVars: {
+                autoplay: 1,
+                start: currentTime,
+              },
+            }}
+          />
+        </div>
+      )}
+
+      {/* Create Playlist Modal */}
+      <Dialog open={isPlaylistModalOpen} onOpenChange={setIsPlaylistModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create Playlist</DialogTitle>
+            <DialogDescription>
+              Give your new playlist a name and an optional description.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                value={newPlaylistName}
+                onChange={(e) => setNewPlaylistName(e.target.value)}
+                placeholder="My Awesome Playlist"
+                autoFocus
+                disabled={isCreatingPlaylist}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description (optional)</Label>
+              <Textarea
+                id="description"
+                value={newPlaylistDescription}
+                onChange={(e) => setNewPlaylistDescription(e.target.value)}
+                placeholder="A collection of my favorite tracks."
+                disabled={isCreatingPlaylist}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPlaylistModalOpen(false)} disabled={isCreatingPlaylist}>
+              Cancel
+            </Button>
+            <Button onClick={confirmCreatePlaylist} disabled={isCreatingPlaylist || !newPlaylistName.trim()}>
+              {isCreatingPlaylist ? "Creating... " : "Create"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PlayerContext.Provider>
   );
 }

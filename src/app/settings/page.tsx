@@ -48,6 +48,7 @@ export default function SettingsPage() {
 
   const [streamingServices, setStreamingServices] = useState({
     youtubeMusic: true,
+    youtube: true,
   });
 
   const [trackTransitions, setTrackTransitions] = useState({
@@ -121,8 +122,18 @@ export default function SettingsPage() {
     updateSetting('notifications', newPrefs);
   };
 
-  const handleStreamingServiceChange = (service: 'youtubeMusic', value: boolean) => {
+  const handleStreamingServiceChange = (service: 'youtubeMusic' | 'youtube', value: boolean) => {
     const newServices = { ...streamingServices, [service]: value };
+
+    // Enforce mutual exclusivity: only one can be active at a time
+    if (value === true) {
+      if (service === 'youtubeMusic') {
+        newServices.youtube = false;
+      } else if (service === 'youtube') {
+        newServices.youtubeMusic = false;
+      }
+    }
+
     setStreamingServices(newServices);
     updateSetting('streamingServices', newServices);
   };
@@ -271,6 +282,22 @@ export default function SettingsPage() {
                 id="youtube-music"
                 checked={streamingServices.youtubeMusic}
                 onCheckedChange={(checked) => handleStreamingServiceChange('youtubeMusic', checked)}
+              />
+            </div>
+            <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+              <Label htmlFor="youtube" className="flex items-center gap-3">
+                <Youtube className="h-6 w-6 text-[#FF0000]" />
+                <div className="flex flex-col space-y-1">
+                  <span>YouTube</span>
+                  <span className="font-normal leading-snug text-muted-foreground">
+                    Connect your YouTube playback preferences.
+                  </span>
+                </div>
+              </Label>
+              <Switch
+                id="youtube"
+                checked={streamingServices.youtube}
+                onCheckedChange={(checked) => handleStreamingServiceChange('youtube', checked)}
               />
             </div>
           </CardContent>

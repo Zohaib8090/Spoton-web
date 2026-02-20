@@ -12,14 +12,15 @@ import {
   Heart,
   Mic2,
   ListMusic,
-  Laptop2,
   Volume2,
   Maximize2,
+  ListPlus
 } from "lucide-react";
 import { usePlayer } from "@/context/player-context";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { AddToPlaylistDropdown } from "@/components/add-to-playlist-dropdown";
 
 export function Player() {
   const {
@@ -196,7 +197,17 @@ export function Player() {
         <div className="flex items-center justify-end gap-1 sm:gap-2 w-auto sm:w-64">
           <Button variant="ghost" size="icon" className="hidden lg:inline-flex text-muted-foreground hover:text-foreground" onClick={toggleQueue}><Mic2 size={18} /></Button>
           <Button variant="ghost" size="icon" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground" onClick={toggleQueue}><ListMusic size={18} /></Button>
-          <Button variant="ghost" size="icon" className="hidden lg:inline-flex text-muted-foreground hover:text-foreground"><Laptop2 size={18} /></Button>
+
+          {currentSong && (
+            <div className="hidden lg:block">
+              <AddToPlaylistDropdown currentSong={currentSong}>
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+                  <ListPlus size={18} />
+                </Button>
+              </AddToPlaylistDropdown>
+            </div>
+          )}
+
           <Button variant="ghost" size="icon" className="hidden md:inline-flex text-muted-foreground hover:text-foreground"><Volume2 size={18} /></Button>
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={toggleFullScreenPlayer}><Maximize2 size={18} /></Button>
         </div>

@@ -1,41 +1,21 @@
-# Firebase Studio - Spoton Music App
+# Spoton Music & Video - Ad-Free Streaming
 
-This is a Next.js application built with Firebase Studio.
-## Our website https://spoton-web-lime.vercel.app/
-https://energetic-purpose-142389.framer.app/
-## Running Locally on Windows
+Spoton is a premium music and video streaming platform. This application allows you to stream your favorite content directly from YouTube without any ads, providing a clean and uninterrupted listening and viewing experience.
 
-To run this application on your local machine, you'll need to have [Node.js](https://nodejs.org/) installed. Then, follow these steps:
+## Live Demo
 
-### 1. Download Your Project
+Experience the app live on the following platforms:
 
-Download the source code of your project as a ZIP file and extract it to a folder on your laptop.
+- **Render**: [https://spoton-web.onrender.com](https://spoton-web.onrender.com)
+- **Vercel**: [https://spoton-web-app.vercel.app](https://spoton-web-app.vercel.app)
 
-### 2. Set Up Environment Variables
+## Key Features
 
-The application requires API keys to connect to services like Firebase and YouTube.
+- **Ad-Free Streaming**: Enjoy music and videos without interruptions.
+- **YouTube Integration**: Search and stream directly from the massive YouTube library.
+- **Modern UI/UX**: A sleek, premium interface built with Next.js, featuring smooth transitions and a responsive design.
+- **Secure Persistence**: Your preferences and data are managed securely via Firebase.
 
-1.  **Create an environment file:** In the root folder of your project, create a new file named `.env`.
-2.  **Add API Keys:** Copy the content from `.env.example` into your new `.env` file and fill in the required values. You will need to get a `YOUTUBE_API_KEY` from the Google Cloud Console.
+---
+Built with ❤️ using Next.js and Firebase.
 
-### 3. Install Dependencies
-
-Open a terminal or Command Prompt, navigate into your project's root folder, and run the following command to install all the necessary packages:
-
-```bash
-npm install
-```
-
-### 4. Run the Development Server
-
-Once the installation is complete, you can start the local development server with this command:
-
-```bash
-npm run dev
-```
-
-This will start the application, and you'll see a message in the terminal indicating it's running, usually at `http://localhost:3000`.
-
-### 5. Open in Your Browser
-
-Open your web browser and navigate to `http://localhost:3000` to see your application running live on your laptop! Any changes you make to the code will now automatically reload in the browser.

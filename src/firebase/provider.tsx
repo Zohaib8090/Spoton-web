@@ -120,8 +120,17 @@ export const useFirebase = (): FirebaseServicesAndUser => {
     throw new Error('useFirebase must be used within a FirebaseProvider.');
   }
 
+  // Build-time safeguard: if services are missing (e.g. during Vercel static generation), 
+  // return nulls instead of crashing. Runtime code should handle null checks if needed.
   if (!context.areServicesAvailable || !context.firebaseApp || !context.firestore || !context.auth) {
-    throw new Error('Firebase core services not available. Check FirebaseProvider props.');
+    return {
+      firebaseApp: context.firebaseApp as any,
+      firestore: context.firestore as any,
+      auth: context.auth as any,
+      user: context.user,
+      isUserLoading: context.isUserLoading,
+      userError: context.userError,
+    };
   }
 
   return {

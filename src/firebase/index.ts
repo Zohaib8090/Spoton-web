@@ -42,11 +42,20 @@ export function initializeFirebase() {
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
-  return {
-    firebaseApp,
-    auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp)
-  };
+  try {
+    return {
+      firebaseApp,
+      auth: getAuth(firebaseApp),
+      firestore: getFirestore(firebaseApp)
+    };
+  } catch (e) {
+    console.warn('Firebase SDKs initialization failed. This is expected during build if API keys are missing.', e);
+    return {
+      firebaseApp: firebaseApp,
+      auth: null as any,
+      firestore: null as any
+    };
+  }
 }
 
 export * from './provider';

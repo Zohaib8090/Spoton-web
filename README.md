@@ -6,8 +6,7 @@ Spoton is a premium music and video streaming platform. This application allows 
 
 Experience the app live on the following platforms:
 
-- **Render**: [https://spoton-web.onrender.com](https://spoton-web.onrender.com)
-- **Vercel**: [https://spoton-web-app.vercel.app](https://spoton-web-app.vercel.app)
+- **Render**: https://spotonmusic.duckdns.org/
 
 ## Key Features
 

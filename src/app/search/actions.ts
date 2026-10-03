@@ -27,7 +27,52 @@ function formatDuration(duration: string): string {
     return `${fmtMinutes}:${fmtSeconds.toString().padStart(2, '0')}`;
 }
 
-export async function searchYoutubeAction(query: string, searchType: 'youtube' | 'youtubeMusic' = 'youtubeMusic'): Promise<{ results?: YoutubeResult[], error?: string }> {
+const CACHE_TTL_MS = 10 * 60 * 1000;
+const CACHE_MAX_ENTRIES = 200;
+const RATE_WINDOW_MS = 60 * 1000;
+const RATE_MAX_REQUESTS = 30;
+
+type SearchOutcome = { results?: YoutubeResult[], error?: string };
+
+// search.list costs 100 quota units per call, so cache results and cap request volume.
+const searchCache = new Map<string, { expires: number, value: SearchOutcome }>();
+let rateWindowStart = 0;
+let rateCount = 0;
+
+function allowRequest(): boolean {
+    const now = Date.now();
+    if (now - rateWindowStart > RATE_WINDOW_MS) {
+        rateWindowStart = now;
+        rateCount = 0;
+    }
+    rateCount++;
+    return rateCount <= RATE_MAX_REQUESTS;
+}
+
+export async function searchYoutubeAction(query: string, searchType: 'youtube' | 'youtubeMusic' = 'youtubeMusic'): Promise<SearchOutcome> {
+    const normalized = query.trim().toLowerCase().slice(0, 200);
+    if (!normalized) return { results: [] };
+
+    const cacheKey = `${searchType}:${normalized}`;
+    const cached = searchCache.get(cacheKey);
+    if (cached && cached.expires > Date.now()) return cached.value;
+
+    if (!allowRequest()) {
+        return { error: 'Too many searches right now. Please try again in a minute.' };
+    }
+
+    const outcome = await fetchYoutubeResults(query.trim(), searchType);
+    if (outcome.results) {
+        if (searchCache.size >= CACHE_MAX_ENTRIES) {
+            const oldest = searchCache.keys().next().value;
+            if (oldest !== undefined) searchCache.delete(oldest);
+        }
+        searchCache.set(cacheKey, { expires: Date.now() + CACHE_TTL_MS, value: outcome });
+    }
+    return outcome;
+}
+
+async function fetchYoutubeResults(query: string, searchType: 'youtube' | 'youtubeMusic'): Promise<SearchOutcome> {
     const youtube = google.youtube('v3');
     const apiKey = process.env.YOUTUBE_API_KEY;
 

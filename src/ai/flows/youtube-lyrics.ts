@@ -25,6 +25,7 @@ const LyricLineSchema = z.object({
 
 const YoutubeLyricsOutputSchema = z.object({
   lyrics: z.array(LyricLineSchema).describe("An array of lyric lines with timing information."),
+  error: z.string().optional().describe("Set when captions could not be fetched."),
 });
 export type YoutubeLyricsOutput = z.infer<typeof YoutubeLyricsOutputSchema>;
 
@@ -48,10 +49,11 @@ const getYoutubeLyricsFlow = ai.defineFlow(
       });
 
       return { lyrics: subtitles };
-    } catch (error: any) {
-      console.error(`Error fetching lyrics for videoId ${videoId}:`, error.message);
-      // Return empty lyrics array on error to prevent client crashes
-      return { lyrics: [] };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`Error fetching lyrics for videoId ${videoId}:`, message);
+      // Return empty lyrics with the reason instead of throwing, so clients don't crash
+      return { lyrics: [], error: message };
     }
   }
 );

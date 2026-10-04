@@ -92,6 +92,7 @@ export function PlaybackQueue() {
       setLyrics([]);
       getYoutubeLyrics({ videoId: currentSong.id })
         .then(result => {
+          if (result.error) console.warn('Lyrics unavailable:', result.error);
           setLyrics(result.lyrics);
         })
         .catch(console.error)

@@ -7,7 +7,7 @@ services:
     startCommand: npm run start
     envVars:
       - key: NODE_VERSION
-        value: 20.0.0
+        value: 20.19.0
       - key: YOUTUBE_API_KEY
         sync: false
       - key: GEMINI_API_KEY

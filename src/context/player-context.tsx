@@ -599,11 +599,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let progressInterval: NodeJS.Timeout;
-    if (isPlaying) {
+    // updateProgress only drives crossfade volume, so skip the timer when crossfade is off.
+    if (isPlaying && trackTransitions.automix && trackTransitions.crossfade > 0) {
       progressInterval = setInterval(updateProgress, 100);
     }
     return () => clearInterval(progressInterval);
-  }, [isPlaying, updateProgress]);
+  }, [isPlaying, updateProgress, trackTransitions.automix, trackTransitions.crossfade]);
 
 
   const closePlayer = useCallback(() => {

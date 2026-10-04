@@ -1,4 +1,4 @@
-# **App Name**: HarmonyStream
+# **App Name**: Spoton
 
 ## Core Features:
 

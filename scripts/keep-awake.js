@@ -1,6 +1,6 @@
 const https = require('https');
 
-const URL = 'https://spoton-web.onrender.com/';
+const URL = process.env.KEEP_AWAKE_URL || process.env.RENDER_EXTERNAL_URL || 'https://spotonmusic.duckdns.org/';
 const INTERVAL = 14 * 60 * 1000; // 14 minutes
 
 function ping() {
